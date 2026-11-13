@@ -43,7 +43,7 @@ export const SnmpRow = {
   },
 
   render(status) {
-    this.renderStats(status.system);
+    this.renderStats(status?.system || status);
   },
 
   async load(range, status, activeRouter = "hq") {

@@ -83,7 +83,7 @@ export const InterfacesTableRow = {
     `;
 
     // Dữ liệu bảng
-    const rows = this.sortedRows(status.interfaces);
+    const rows = this.sortedRows(status?.interfaces);
     if (!rows.length) {
       table.innerHTML = `<tr><td colspan="${COLUMNS.length}" class="text-center muted p-3">Không có cổng nào phù hợp</td></tr>`;
       return;

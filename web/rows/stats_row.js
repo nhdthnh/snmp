@@ -16,8 +16,8 @@ const statItem = (label, value, colorClass = "c-green", infoIcon = false) => `
 
 export const StatsRow = {
   render(status) {
-    const s = status.system || {};
-    const ifs = Object.values(status.interfaces || {});
+    const s = status?.system || status || {};
+    const ifs = Object.values(status?.interfaces || {});
     const totalErrors = ifs.reduce((acc, i) => acc + (i.errors || 0), 0);
 
     // Dải 1: Thông tin hệ thống cốt lõi (Khớp Image 1)

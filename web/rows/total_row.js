@@ -68,7 +68,7 @@ export const TotalRow = {
   },
 
   render(status) {
-    this.renderGauges(status.system);
+    this.renderGauges(status?.system || status);
   },
 
   async load(range, status, activeRouter = "hq") {

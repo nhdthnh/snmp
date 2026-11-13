@@ -100,12 +100,12 @@ const ORTHO_LINKS = [
     badgePos: { x: 1020, y: 140 },
   },
 
-  // TRUNK LINE: MikroTik RB3011UiAS <-> SW CORE Ruijie
+  // TRUNK LINE: MikroTik RB3011UiAS <-> SW CORE Ruijie (ether5 <-> p2)
   {
-    from: "mikrotik", to: "core", ifName: "ether3",
+    from: "mikrotik", to: "core", ifName: "ether5",
     path: "M 780 256 V 420",
-    pFrom: "eth3 (p2)", pFromPos: { x: 780, y: 275 },
-    pTo: "p2 (Trunk)", pToPos: { x: 780, y: 395 },
+    pFrom: "ether5", pFromPos: { x: 780, y: 275 },
+    pTo: "p2", pToPos: { x: 780, y: 395 },
     badgePos: { x: 890, y: 340 },
   },
 

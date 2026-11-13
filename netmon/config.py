@@ -93,7 +93,7 @@ DEVICES = {
     "bob_sw04": ("Sw04 Hikvision PoE DS-3E1318P", "192.168.4.243"),
     "bob_nvr": ("NVR01 Hikvision", "192.168.4.253"),
     "bob_photo": ("Photocopy01", "192.168.4.249"),
-    "bob_mcc": ("MCC01 Máy chấm công BOB", "192.168.4.104"),
+    "bob_mcc": ("MCC01 Máy chấm công BOB", "192.168.4.248"),
     "bob_ap": ("AP01-AP05 (Reyee Wi-Fi 6)", "192.168.4.94"),
     "bob_c2_16": ("Camera C2-C16 (15 CAM)", "192.168.4.104"),
     "bob_c17_31": ("Camera C17-C31 (15 CAM)", "192.168.4.120"),

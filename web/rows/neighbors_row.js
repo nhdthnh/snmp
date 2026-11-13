@@ -6,7 +6,7 @@ import { escapeHtml } from "../format.js";
 
 export const NeighborsRow = {
   render(status) {
-    const list = status.neighbors || [];
+    const list = status?.neighbors || [];
     const tbody = document.getElementById("neighbors-table-body");
     if (!tbody) return;
 

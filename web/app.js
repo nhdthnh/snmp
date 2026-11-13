@@ -249,13 +249,13 @@ class NetMonApp {
     }
 
     // 2. Render các khối trạng thái tức thời theo router được chọn
-    TotalRow.render(rtrStatus);
-    StatsRow.render(rtrStatus);
-    WanCardsRow.render(status, this.activeRouter);
-    InterfacesTableRow.render(rtrStatus);
-    NeighborsRow.render(rtrStatus);
-    SnmpRow.render(rtrStatus);
-    TopologyRow.render(status);
+    try { TotalRow.render(rtrStatus); } catch (e) { console.error("TotalRow.render error:", e); }
+    try { StatsRow.render(rtrStatus); } catch (e) { console.error("StatsRow.render error:", e); }
+    try { WanCardsRow.render(status, this.activeRouter); } catch (e) { console.error("WanCardsRow.render error:", e); }
+    try { InterfacesTableRow.render(rtrStatus); } catch (e) { console.error("InterfacesTableRow.render error:", e); }
+    try { NeighborsRow.render(rtrStatus); } catch (e) { console.error("NeighborsRow.render error:", e); }
+    try { SnmpRow.render(rtrStatus); } catch (e) { console.error("SnmpRow.render error:", e); }
+    try { TopologyRow.render(status); } catch (e) { console.error("TopologyRow.render error:", e); }
   }
 
   async loadHistory() {
@@ -265,13 +265,13 @@ class NetMonApp {
     const activeRouter = this.activeRouter;
 
     // Tải song song lịch sử cho các hàng đồ thị theo router đang chọn (HQ vs BOB)
-    await Promise.all([
-      TotalRow.loadSystemChart(r, activeRouter),
-      WanCardsRow.load(r, s, activeRouter),
-      TrafficBasicRow.load(r, s, activeRouter),
-      TrafficGridRow.load(r, s, activeRouter),
-      PacketsErrorsRow.load(r, s, activeRouter),
-      SnmpRow.loadTempChart(r, activeRouter),
+    await Promise.allSettled([
+      TotalRow.loadSystemChart(r, activeRouter).catch(e => console.error("loadSystemChart error:", e)),
+      WanCardsRow.load(r, s, activeRouter).catch(e => console.error("WanCardsRow.load error:", e)),
+      TrafficBasicRow.load(r, s, activeRouter).catch(e => console.error("TrafficBasicRow.load error:", e)),
+      TrafficGridRow.load(r, s, activeRouter).catch(e => console.error("TrafficGridRow.load error:", e)),
+      PacketsErrorsRow.load(r, s, activeRouter).catch(e => console.error("PacketsErrorsRow.load error:", e)),
+      SnmpRow.loadTempChart(r, activeRouter).catch(e => console.error("loadTempChart error:", e)),
     ]);
   }
 

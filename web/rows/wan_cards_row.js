@@ -14,7 +14,7 @@ const HQ_CARDS_CONFIG = [
   { name: "FPT HQ (WAN 1)", iface: "ether1", type: "wan", desc: "DHCP IP WAN (RB3011)" },
   { name: "VNPT HQ (WAN 2)", iface: "ether2", type: "wan", desc: "113.161.75.195 (RB3011)" },
   { name: "IPsec Site-to-Site", iface: "ipsec", type: "vpn", desc: "HQ ⟷ Chi nhánh BOB (hAP ac²)" },
-  { name: "Nối SW Core Ruijie", iface: "ether3", type: "core", desc: "Cổng P.2 nối Ruijie ES224GC" },
+  { name: "Nối SW Core Ruijie", iface: "ether5", type: "core", desc: "Cổng P.2 nối Ruijie ES224GC" },
   { name: "DVR Camera", iface: "ether4", type: "cam", desc: "Đầu ghi Camera Vantech (1.101)" },
   { name: "SW WiFi 296", iface: "ether9", type: "wifi", desc: "AP VLAN 20: 192.168.0.x" },
   { name: "Core Trunk", iface: "BridgeVLAN", type: "core", desc: "Trunk nối SW Core Ruijie" },
@@ -166,37 +166,6 @@ export const WanCardsRow = {
       ? ["bob_ether1", "bob_pppoe-out1"] 
       : ["ether1", "ether2"];
 
-    const { series: trafficMap } = await fetchTraffic(range, wanIfaces);
-
-    // Tính tổng RX và tổng TX của các đường WAN theo thời điểm
-    const totalRxMap = new Map();
-    const totalTxMap = new Map();
-
-    wanIfaces.forEach(ifName => {
-      const rxPts = pickColumn(trafficMap, 1, ifName);
-      const txPts = pickColumn(trafficMap, 2, ifName);
-
-      rxPts.forEach(([t, val]) => totalRxMap.set(t, (totalRxMap.get(t) || 0) + val));
-      txPts.forEach(([t, val]) => totalTxMap.set(t, (totalTxMap.get(t) || 0) + val));
-    });
-
-    const sumRxPts = [...totalRxMap.entries()].sort((a, b) => a[0] - b[0]);
-    const sumTxPts = [...totalTxMap.entries()].sort((a, b) => a[0] - b[0]);
-
-    renderLineChart(
-      canvas,
-      [
-        { name: "Nhận RX", color: "#4cc38a", points: sumRxPts },
-        { name: "Gửi TX", color: "#5794f2", points: sumTxPts },
-      ],
-      {
-        range,
-        formatY: fmtBps,
-        fill: true,
-      }
-    );
-  },
-};
     const { series: trafficMap } = await fetchTraffic(range, wanIfaces);
 
     // Tính tổng RX và tổng TX của các đường WAN theo thời điểm
