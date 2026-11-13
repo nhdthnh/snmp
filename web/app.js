@@ -150,6 +150,15 @@ class NetMonApp {
     this.activeTab = tabName;
     const sections = document.querySelectorAll(".dashboard-section");
 
+    const mainEl = document.querySelector("main");
+    if (tabName === "topology") {
+      document.body.classList.add("tab-topology-active");
+      if (mainEl) mainEl.classList.add("main-full-width");
+    } else {
+      document.body.classList.remove("tab-topology-active");
+      if (mainEl) mainEl.classList.remove("main-full-width");
+    }
+
     sections.forEach(sec => {
       const secTab = sec.dataset.tab;
       if (

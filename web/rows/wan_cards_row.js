@@ -14,7 +14,7 @@ const HQ_CARDS_CONFIG = [
   { name: "FPT HQ (WAN 1)", iface: "ether1", type: "wan", desc: "DHCP IP WAN (RB3011)" },
   { name: "VNPT HQ (WAN 2)", iface: "ether2", type: "wan", desc: "113.161.75.195 (RB3011)" },
   { name: "IPsec Site-to-Site", iface: "ipsec", type: "vpn", desc: "HQ ⟷ Chi nhánh BOB (hAP ac²)" },
-  { name: "Nối SW Core Ruijie", iface: "ether5", type: "core", desc: "Cổng P.2 nối Ruijie ES224GC" },
+  { name: "Nối SW Core Ruijie", iface: "ether5", type: "core", desc: "ether5 · Cổng P.2 nối Ruijie ES224GC" },
   { name: "DVR Camera", iface: "ether4", type: "cam", desc: "Đầu ghi Camera Vantech (1.101)" },
   { name: "SW WiFi 296", iface: "ether9", type: "wifi", desc: "AP VLAN 20: 192.168.0.x" },
   { name: "Core Trunk", iface: "BridgeVLAN", type: "core", desc: "Trunk nối SW Core Ruijie" },
@@ -86,6 +86,15 @@ export const WanCardsRow = {
           ? `Peer HQ: 113.161.75.195 · ${ipsec.rtt || 4}ms`
           : `Peer BOB: ${ipsec.peer || "113.161.45.93"} · ${ipsec.rtt || 4}ms`;
         footerLink = "Xem Sơ đồ mạng →";
+      } else if (cfg.iface.startsWith("bob_")) {
+        const rawName = cfg.iface.replace("bob_", "");
+        const bobIfs = status.routers?.bob?.interfaces || {};
+        const info = bobIfs[rawName] || (rawName === "ether1" ? (bobIfs["pppoe-out1"] || {}) : {});
+        isUp = info.up !== undefined ? info.up : true;
+        rxBps = info.rx_bps || 378000;
+        txBps = info.tx_bps || 4400000;
+        footerText = info.mac ? `MAC: ${info.mac}` : "113.161.45.93";
+        footerLink = "Xem chi tiết →";
       } else {
         const info = ifaces[cfg.iface] || (cfg.iface === "ether1" ? (ifaces["pppoe-out1"] || {}) : {});
         isUp = info.up !== undefined ? info.up : true;
