@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>General / Mikrotik · NetMon SNMP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header phong cách Grafana -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="breadcrumb">
+        <span class="muted">General /</span>
+        <span>Mikrotik</span>
+      </div>
+      <span id="connection-status-pill" class="status-pill status-online">HQ: RB3011</span>
+      <span id="bob-status-pill" class="status-pill status-online" style="margin-left: 6px;">BOB: hAP ac²</span>
+    </div>
+
+    <div class="header-controls">
+      <!-- Chọn Router MikroTik xem SNMP -->
+      <select id="router-select" class="control-select router-select" title="Chọn Router MikroTik xem chỉ số SNMP">
+        <option value="hq" selected>🏢 HQ: RB3011UiAS (192.168.1.1)</option>
+        <option value="bob">🏭 BOB: hAP ac² (192.168.4.1)</option>
+      </select>
+
+      <span id="last-updated-time" class="muted" style="font-size:12px;"></span>
+      
+      <!-- Chọn khoảng thời gian -->
+      <select id="time-range-select" class="control-select">
+        <option value="3600" selected>Last 1 hour</option>
+        <option value="10800">Last 3 hours</option>
+        <option value="21600">Last 6 hours</option>
+        <option value="86400">Last 24 hours</option>
+        <option value="604800">Last 7 days</option>
+      </select>
+
+      <!-- Chọn chu kỳ tự động cập nhật -->
+      <select id="refresh-interval-select" class="control-select">
+        <option value="10000">10s</option>
+        <option value="30000" selected>30s</option>
+        <option value="60000">1m</option>
+        <option value="300000">5m</option>
+        <option value="0">Tắt</option>
+      </select>
+
+      <!-- Nút làm mới thủ công -->
+      <button id="manual-refresh-btn" class="icon-btn" title="Làm mới ngay">
+        <span id="refresh-icon">↻</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Thanh tab điều hướng chế độ xem -->
+  <nav class="nav-tabs-bar">
+    <button class="nav-tab active" data-tab="all">Tất cả (Full Dashboard)</button>
+    <button class="nav-tab" data-tab="overview">Tổng quan</button>
+    <button class="nav-tab" data-tab="traffic">Lưu lượng (Traffic)</button>
+    <button class="nav-tab" data-tab="interfaces">Cổng &amp; Neighbors</button>
+    <button class="nav-tab" data-tab="system">Hệ thống &amp; Lỗi</button>
+    <button class="nav-tab" data-tab="topology">Sơ đồ mạng (Topology)</button>
+  </nav>
+
+  <main>
+    <!-- 1. HÀNG TOTAL: 4 Gauges + System Graph [Image 1] -->
+    <section class="dashboard-section" data-tab="total">
+      <div class="collapsible-header" data-target="total-body">
+        <span class="arrow-icon">▼</span>
+        <span>Total</span>
+      </div>
+      <div id="total-body" class="collapsible-body">
+        <div class="total-grid">
+          <!-- 4 Đồng hồ Gauge -->
+          <div id="total-gauges-container" style="display:contents;"></div>
+
+          <!-- Biểu đồ System -->
+          <div class="card system-card">
+            <div class="card-head">
+              <span class="panel-title">System</span>
+              <div class="system-legend">
+                <span class="legend-tag"><i style="background:#73bf69"></i>Load CPU</span>
+                <span class="legend-tag"><i style="background:#fade2a"></i>RAM usage</span>
+                <span class="legend-tag"><i style="background:#5794f2"></i>System disk</span>
+              </div>
+            </div>
+            <div class="canvas-wrap" style="flex:1;">
+              <canvas id="system-chart-canvas" style="width:100%; height:130px;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. HÀNG STATS 1: Thông số RouterOS cơ bản [Image 1] -->
+    <section class="dashboard-section" data-tab="total">
+      <div id="stats-row-1" class="stats-bar-grid"></div>
+    </section>
+
+    <!-- HÀNG ĐƯỜNG TRUYỀN & LƯU LƯỢNG WAN [Khớp Hình 2] -->
+    <section class="dashboard-section" data-tab="overview">
+      <div class="collapsible-header" data-target="wan-section-body">
+        <span class="arrow-icon">▼</span>
+        <span>Lưu lượng &amp; Đường truyền Internet</span>
+        <span class="info-icon" title="Tổng lưu lượng WAN và thẻ chi tiết từng cổng mạng">ℹ</span>
+      </div>
+      <div id="wan-section-body" class="collapsible-body" style="display:flex; flex-direction:column; gap:14px;">
+        <!-- Card Đồ thị Lưu lượng Internet -->
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="panel-title">Lưu lượng Internet</div>
+              <div class="muted" style="font-size:11.5px; margin-top:2px;">Tổng các interface WAN được chọn · đơn vị Mbps</div>
+            </div>
+            <div class="system-legend">
+              <span class="legend-tag"><i style="background:#4cc38a"></i>Nhận RX: <b id="wan-total-rx">–</b></span>
+              <span class="legend-tag"><i style="background:#5794f2"></i>Gửi TX: <b id="wan-total-tx">–</b></span>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="wan-traffic-chart-canvas" style="width:100%; height:180px;"></canvas>
+          </div>
+        </div>
+
+        <!-- Lưới thẻ Metric từng cổng khớp Hình 2 -->
+        <div>
+          <div style="font-size:13px; font-weight:600; color:var(--text-bright); margin-bottom:10px;">
+            Đường truyền mạng &amp; Cổng kết nối
+          </div>
+          <div id="wan-cards-grid" class="wan-cards-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. HÀNG NETWORK TRAFFIC BASIC [Image 1] -->
+    <section class="dashboard-section" data-tab="traffic-basic">
+      <div class="collapsible-header" data-target="traffic-basic-body">
+        <span class="arrow-icon">▼</span>
+        <span>Network Traffic Basic</span>
+        <span class="info-icon" title="Tổng hợp lưu lượng các cổng chính">ℹ</span>
+      </div>
+      <div id="traffic-basic-body" class="collapsible-body">
+        <div class="card">
+          <div class="traffic-basic-grid">
+            <div class="canvas-wrap">
+              <canvas id="traffic-basic-canvas" style="width:100%; height:260px;"></canvas>
+            </div>
+            <div id="traffic-basic-legend" class="traffic-basic-legend"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. HÀNG TRAFFIC PANELS (LƯỚI CHI TIẾT TỪNG CỔNG) [Image 3] -->
+    <section id="section-traffic-grid" class="dashboard-section" data-tab="traffic">
+      <div class="collapsible-header" data-target="traffic-grid-body">
+        <span class="arrow-icon">▼</span>
+        <span>Lưu lượng chi tiết từng cổng (Traffic Panels)</span>
+      </div>
+      <div id="traffic-grid-body" class="collapsible-body">
+        <div id="traffic-chips-container" class="traffic-chips-wrap"></div>
+        <div id="traffic-grid-container" class="traffic-panels-grid"></div>
+      </div>
+    </section>
+
+    <!-- 5. HÀNG BẢNG INTERFACES [Image 1 & 4] -->
+    <section class="dashboard-section" data-tab="interfaces">
+      <div class="collapsible-header" data-target="interfaces-body">
+        <span class="arrow-icon">▼</span>
+        <span>Interfaces</span>
+        <span class="info-icon" title="Bấm vào tiêu đề cột để sắp xếp, bấm vào hàng để xem biểu đồ chi tiết">ℹ</span>
+      </div>
+      <div id="interfaces-body" class="collapsible-body">
+        <div class="card">
+          <div class="card-head" style="flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input id="if-search-input" type="text" placeholder="Tìm tên cổng, MAC..." class="control-select" style="min-width:180px;">
+              <select id="if-type-select" class="control-select">
+                <option value="all">Tất cả loại interface</option>
+                <option value="Physical">Physical</option>
+                <option value="ppp">ppp</option>
+                <option value="bridge">bridge</option>
+                <option value="l2vlan">l2vlan</option>
+              </select>
+            </div>
+            <span class="muted" style="font-size:11.5px;">* Bấm vào cổng để xem đồ thị chi tiết</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="interfaces-table-head"></thead>
+              <tbody id="interfaces-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. HÀNG BẢNG NEIGHBORS [Image 4] -->
+    <section class="dashboard-section" data-tab="interfaces">
+      <div class="collapsible-header" data-target="neighbors-body">
+        <span class="arrow-icon">▼</span>
+        <span>Neighbors</span>
+      </div>
+      <div id="neighbors-body" class="collapsible-body">
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="text-left">Neighbor index</th>
+                  <th class="text-left">identity</th>
+                  <th class="text-left">IP</th>
+                  <th class="text-left">MAC</th>
+                </tr>
+              </thead>
+              <tbody id="neighbors-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. HÀNG PACKETS, ERRORS & MTU [Image 2] -->
+    <section class="dashboard-section" data-tab="system">
+      <div class="collapsible-header" data-target="packets-errors-body">
+        <span class="arrow-icon">▼</span>
+        <span>Gói tin, Lỗi &amp; MTU</span>
+      </div>
+      <div id="packets-errors-body" class="collapsible-body" style="display:flex; flex-direction:column; gap:14px;">
+        <!-- Biểu đồ Out Unicast, In Discard, Out Discard -->
+        <div class="card">
+          <div class="card-head">
+            <span class="panel-title">Packets &amp; Discards</span>
+            <div id="packets-discards-legend" class="system-legend"></div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="packets-discards-canvas" style="width:100%; height:160px;"></canvas>
+          </div>
+        </div>
+
+        <!-- 2 Biểu đồ lỗi Tx Errors & Rx Errors -->
+        <div class="two-cols-grid">
+          <div class="card">
+            <div class="card-head">
+              <span class="panel-title">Tx Eth errors, etc</span>
+              <div id="tx-errors-legend" class="legend-stats"></div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="tx-errors-canvas" style="width:100%; height:160px;"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <span class="panel-title">Rx Eth errors, etc</span>
+              <div id="rx-errors-legend" class="legend-stats"></div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="rx-errors-canvas" style="width:100%; height:160px;"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Biểu đồ CPU Temp & MTU -->
+        <div class="two-cols-grid">
+          <div class="card">
+            <div class="card-head">
+              <span class="panel-title">CPU Temp</span>
+              <div id="cpu-temp-legend" class="system-legend"></div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="cpu-temp-history-canvas" style="width:100%; height:160px;"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <span class="panel-title">MTU</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="mtu-chart-canvas" style="width:100%; height:160px;"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dải thông số POE, CAPsMAN & Định danh phần cứng [Image 2] -->
+        <div id="stats-row-2" class="stats-bar-grid"></div>
+      </div>
+    </section>
+
+    <!-- 8. HÀNG SNMP [Image 2] -->
+    <section class="dashboard-section" data-tab="system">
+      <div class="collapsible-header" data-target="snmp-body">
+        <span class="arrow-icon">▼</span>
+        <span>SNMP</span>
+      </div>
+      <div id="snmp-body" class="collapsible-body">
+        <div class="snmp-grid">
+          <div class="card snmp-stat-box">
+            <div class="stat-label">Total SNMP time</div>
+            <div id="snmp-total-time" class="snmp-huge-number c-yellow">1 s</div>
+          </div>
+          <div class="card snmp-stat-box">
+            <div class="stat-label">Time SNMP walk</div>
+            <div id="snmp-walk-time" class="snmp-huge-number c-yellow">1 s</div>
+          </div>
+          <div class="card snmp-stat-box">
+            <div class="stat-label">PDUs returned</div>
+            <div id="snmp-pdus" class="snmp-huge-number c-green">1904</div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <span class="panel-title">Temperature</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="snmp-temp-canvas" style="width:100%; height:110px;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. HÀNG SƠ ĐỒ MẠNG [Image 5] -->
+    <section class="dashboard-section" data-tab="topology">
+      <div class="collapsible-header" data-target="topology-body">
+        <span class="arrow-icon">▼</span>
+        <span>Sơ đồ mạng (Topology)</span>
+      </div>
+      <div id="topology-body" class="collapsible-body">
+        <div class="card">
+          <div id="topology-controls" class="topo-controls-wrap"></div>
+          <div class="topo-wrap">
+            <svg id="topology-svg" class="topo-svg"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
