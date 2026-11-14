@@ -20,9 +20,10 @@
     </div>
 
     <div class="header-controls">
-      <!-- Chọn Router MikroTik xem SNMP -->
+      <!-- Chọn Router MikroTik xem SNMP (Mặc định: Tất cả 2 Router HQ + BOB) -->
       <select id="router-select" class="control-select router-select" title="Chọn Router MikroTik xem chỉ số SNMP">
-        <option value="hq" selected>🏢 HQ: RB3011UiAS (192.168.1.1)</option>
+        <option value="all" selected>🌐 Cả 2 Router: HQ (RB3011) + BOB (hAP ac²)</option>
+        <option value="hq">🏢 HQ: RB3011UiAS (192.168.1.1)</option>
         <option value="bob">🏭 BOB: hAP ac² (192.168.4.1)</option>
       </select>
 
@@ -50,6 +51,12 @@
       <button id="manual-refresh-btn" class="icon-btn" title="Làm mới ngay">
         <span id="refresh-icon">↻</span>
       </button>
+
+      <!-- Menu tài khoản & Đăng xuất -->
+      <div class="user-profile-menu">
+        <span class="user-badge" title="Tài khoản đang đăng nhập">👤 system</span>
+        <button id="logout-btn" class="logout-btn" title="Đăng xuất khỏi hệ thống">Đăng xuất</button>
+      </div>
     </div>
   </header>
 

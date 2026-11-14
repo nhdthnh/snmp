@@ -2,7 +2,7 @@
  * Main Application Orchestrator (app.js).
  * Nhập các module hàng (rows), điều phối chu kỳ tải dữ liệu, chuyển tab, và phản hồi tương tác người dùng.
  */
-import { fetchStatus } from "./api.js";
+import { fetchStatus, logoutUser } from "./api.js";
 import { fmtTime } from "./format.js";
 
 // Nhập các thành phần hàng độc lập
@@ -24,7 +24,7 @@ class NetMonApp {
     this.timer = null;
     this.status = null;
     this.activeTab = "all";
-    this.activeRouter = "hq";     // "hq" (RB3011UiAS) | "bob" (hAP ac²)
+    this.activeRouter = "all";    // Mặc định: "all" (Cả 2 Router HQ & BOB)
     this.isRefreshing = false;
   }
 
@@ -70,6 +70,12 @@ class NetMonApp {
     const refreshBtn = document.getElementById("manual-refresh-btn");
     if (refreshBtn) {
       refreshBtn.onclick = () => this.refresh(true);
+    }
+
+    // Nút đăng xuất
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) {
+      logoutBtn.onclick = () => logoutUser();
     }
 
     // Tab điều hướng
@@ -258,10 +264,10 @@ class NetMonApp {
     }
 
     // 2. Render các khối trạng thái tức thời theo router được chọn
-    try { TotalRow.render(rtrStatus); } catch (e) { console.error("TotalRow.render error:", e); }
-    try { StatsRow.render(rtrStatus); } catch (e) { console.error("StatsRow.render error:", e); }
+    try { TotalRow.render(status, this.activeRouter); } catch (e) { console.error("TotalRow.render error:", e); }
+    try { StatsRow.render(status, this.activeRouter); } catch (e) { console.error("StatsRow.render error:", e); }
     try { WanCardsRow.render(status, this.activeRouter); } catch (e) { console.error("WanCardsRow.render error:", e); }
-    try { InterfacesTableRow.render(rtrStatus); } catch (e) { console.error("InterfacesTableRow.render error:", e); }
+    try { InterfacesTableRow.render(status, this.activeRouter); } catch (e) { console.error("InterfacesTableRow.render error:", e); }
     try { NeighborsRow.render(rtrStatus); } catch (e) { console.error("NeighborsRow.render error:", e); }
     try { SnmpRow.render(rtrStatus); } catch (e) { console.error("SnmpRow.render error:", e); }
     try { TopologyRow.render(status); } catch (e) { console.error("TopologyRow.render error:", e); }

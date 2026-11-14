@@ -1,9 +1,23 @@
 /**
  * Lớp giao tiếp API với backend NetMon (api.js).
+ * Tự động gắn Token xác thực và điều hướng đăng nhập nếu phiên hết hạn.
  */
 
 export async function getJSON(url) {
-  const res = await fetch(url);
+  const headers = {};
+  try {
+    const token = localStorage.getItem("netmon_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch (e) {}
+
+  const res = await fetch(url, { headers });
+
+  if (res.status === 401) {
+    try { localStorage.removeItem("netmon_token"); } catch (e) {}
+    window.location.href = "/login.html";
+    throw new Error("Phiên làm việc hết hạn hoặc chưa đăng nhập.");
+  }
+
   if (!res.ok) throw new Error(`${url} lỗi HTTP: ${res.status}`);
   return res.json();
 }
@@ -30,6 +44,15 @@ export async function fetchSummary(range, ifaces = []) {
   const param = ifaces.length ? `&ifaces=${encodeURIComponent(ifaces.join(","))}` : "";
   const res = await getJSON(`/api/summary?range=${range}${param}`);
   return res.stats || {};
+}
+
+/** Đăng xuất khỏi hệ thống */
+export async function logoutUser() {
+  try {
+    await fetch("/api/logout", { method: "POST" });
+  } catch (e) {}
+  try { localStorage.removeItem("netmon_token"); } catch (e) {}
+  window.location.href = "/login.html";
 }
 
 /**

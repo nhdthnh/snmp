@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập · NetMon SNMP</title>
+  <style>
+    :root {
+      --bg-app: #0b0f19;
+      --bg-card: rgba(24, 27, 31, 0.88);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --border-glow: rgba(56, 189, 248, 0.35);
+      --text-main: #d8d9da;
+      --text-muted: #94a3b8;
+      --text-bright: #ffffff;
+      --c-blue: #38bdf8;
+      --c-green: #4ade80;
+      --c-red: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-app);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 50% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      z-index: 10;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 36px 32px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(56, 189, 248, 0.15);
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .login-card:hover {
+      border-color: var(--border-glow);
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand-icon-wrap {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 14px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-bright);
+      letter-spacing: -0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #131720;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 13.5px;
+      color: var(--text-bright);
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      border-color: var(--c-blue);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+      background: #171c26;
+    }
+
+    .input-wrapper .toggle-pw-btn {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toggle-pw-btn:hover {
+      color: var(--text-bright);
+    }
+
+    .alert-box {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 18px;
+      line-height: 1.4;
+      background: rgba(248, 113, 113, 0.15);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #38bdf8, #3b82f6);
+      box-shadow: 0 6px 18px rgba(56, 189, 248, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:active {
+      transform: translateY(1px);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 16px;
+    }
+
+    .hint-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+      color: #cbd5e1;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 28px 20px;
+        border-radius: 12px;
+      }
+      .brand-title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="brand-header">
+        <div class="brand-icon-wrap">🌐</div>
+        <h1 class="brand-title">NetMon SNMP</h1>
+        <p class="brand-subtitle">Hệ thống Giám sát MikroTik &amp; Thiết bị mạng</p>
+      </div>
+
+      <div id="alert-box" class="alert-box"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="username-input">Tên đăng nhập</label>
+          <div class="input-wrapper">
+            <input 
+              id="username-input" 
+              type="text" 
+              class="form-input" 
+              placeholder="Nhập tên đăng nhập..." 
+              autocomplete="username" 
+              required 
+              autofocus
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password-input">Mật khẩu</label>
+          <div class="input-wrapper">
+            <input 
+              id="password-input" 
+              type="password" 
+              class="form-input" 
+              placeholder="Nhập mật khẩu..." 
+              autocomplete="current-password" 
+              required
+            >
+            <button type="button" id="toggle-pw-btn" class="toggle-pw-btn" title="Hiện/ẩn mật khẩu">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="submit-btn">
+          <span id="spinner" class="spinner"></span>
+          <span id="btn-text">Đăng nhập</span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <div>Hệ thống giám sát bảo mật mạng nội bộ HQ &amp; BOB</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const userIn = document.getElementById("username-input");
+    const passIn = document.getElementById("password-input");
+    const togglePw = document.getElementById("toggle-pw-btn");
+    const alertBox = document.getElementById("alert-box");
+    const submitBtn = document.getElementById("submit-btn");
+    const spinner = document.getElementById("spinner");
+    const btnText = document.getElementById("btn-text");
+
+    // Hiện / ẩn mật khẩu
+    togglePw.onclick = () => {
+      const isPw = passIn.type === "password";
+      passIn.type = isPw ? "text" : "password";
+      togglePw.textContent = isPw ? "🙈" : "👁️";
+    };
+
+    // Ẩn thông báo lỗi khi người dùng gõ
+    userIn.oninput = passIn.oninput = () => {
+      alertBox.style.display = "none";
+    };
+
+    form.onsubmit = async ev => {
+      ev.preventDefault();
+      const username = userIn.value.trim();
+      const password = passIn.value;
+
+      if (!username || !password) return;
+
+      submitBtn.disabled = true;
+      spinner.style.display = "inline-block";
+      btnText.textContent = "Đang xác thực...";
+      alertBox.style.display = "none";
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ok) {
+          if (data.token) {
+            try { localStorage.setItem("netmon_token", data.token); } catch (e) {}
+          }
+          btnText.textContent = "Đăng nhập thành công!";
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 300);
+        } else {
+          alertBox.textContent = data.error || "Sai tên đăng nhập hoặc mật khẩu!";
+          alertBox.style.display = "block";
+          passIn.value = "";
+          passIn.focus();
+        }
+      } catch (err) {
+        alertBox.textContent = "Lỗi kết nối máy chủ! Vui lòng thử lại.";
+        alertBox.style.display = "block";
+      } finally {
+        submitBtn.disabled = false;
+        spinner.style.display = "none";
+        btnText.textContent = "Đăng nhập";
+      }
+    };
+  </script>
+</body>
+</html>

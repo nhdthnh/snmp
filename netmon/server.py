@@ -1,11 +1,11 @@
-"""HTTP server: Cung cấp API JSON và phục vụ các file tĩnh trong web/."""
+"""HTTP server: Cung cấp API JSON có bảo mật và phục vụ các file tĩnh trong web/."""
 import json
 import mimetypes
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config
+from . import auth, config
 from .collector import Collector
 from .storage import MetricStore
 
@@ -21,23 +21,84 @@ class Handler(BaseHTTPRequestHandler):
     collector: Collector = None
     store: MetricStore = None
 
+    def do_POST(self):
+        url = urlparse(self.path)
+        path = url.path
+
+        if path == "/api/login":
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            try:
+                data = json.loads(raw_body.decode("utf-8"))
+            except Exception:
+                data = {}
+            username = str(data.get("username", "")).strip()
+            password = str(data.get("password", "")).strip()
+
+            token = auth.authenticate(username, password)
+            if token:
+                cookie = f"netmon_session={token}; Path=/; Max-Age=2592000; SameSite=Lax; HttpOnly"
+                self._json({"ok": True, "token": token, "username": username}, cookies=[cookie])
+            else:
+                self._json({"ok": False, "error": "Tên đăng nhập hoặc mật khẩu không chính xác!"}, code=401)
+
+        elif path == "/api/logout":
+            token = auth.get_token_from_headers(self.headers)
+            if token:
+                auth.logout(token)
+            cookie = "netmon_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly"
+            self._json({"ok": True}, cookies=[cookie])
+        else:
+            self._send(404, b"Not found", "text/plain")
+
     def do_GET(self):
         url = urlparse(self.path)
         path = url.path
         query = parse_qs(url.query)
 
-        if path == "/api/status":
-            self._json(self.collector.state)
-        elif path == "/api/traffic":
-            self._handle_traffic(query)
-        elif path == "/api/metrics":
-            self._handle_metrics(query)
-        elif path == "/api/summary":
-            self._handle_summary(query)
-        elif path == "/api/history":
-            self._handle_history(query)
-        else:
-            self._static(path)
+        is_auth = auth.is_authenticated(self.headers)
+
+        # 1. API kiểm tra phiên đăng nhập
+        if path == "/api/auth-check":
+            return self._json({
+                "authenticated": is_auth,
+                "username": auth.VALID_USERNAME if is_auth else None
+            })
+
+        # 2. Trang đăng nhập login.html
+        if path in ("/login", "/login.html"):
+            if is_auth:
+                return self._redirect("/")
+            return self._static("login.html")
+
+        # 3. Các file tĩnh phục vụ cho màn hình đăng nhập (css, js, ảnh)
+        if path in ("/login.css", "/login.js", "/favicon.ico") or path.endswith((".png", ".jpg", ".svg", ".ico", ".woff", ".woff2")):
+            return self._static(path)
+
+        # 4. Bảo vệ các endpoint API
+        if path.startswith("/api/"):
+            if not is_auth:
+                return self._json({"error": "Unauthorized", "login_url": "/login.html"}, code=401)
+
+            if path == "/api/status":
+                self._json(self.collector.state)
+            elif path == "/api/traffic":
+                self._handle_traffic(query)
+            elif path == "/api/metrics":
+                self._handle_metrics(query)
+            elif path == "/api/summary":
+                self._handle_summary(query)
+            elif path == "/api/history":
+                self._handle_history(query)
+            else:
+                self._send(404, b"Not found", "text/plain")
+            return
+
+        # 5. Các trang giao diện chính: chuyển hướng sang login nếu chưa đăng nhập
+        if not is_auth:
+            return self._redirect("/login.html")
+
+        self._static(path)
 
     def _handle_traffic(self, query):
         seconds = min(int(query.get("range", ["3600"])[0]), MAX_RANGE)
@@ -82,12 +143,11 @@ class Handler(BaseHTTPRequestHandler):
         if not clean_path:
             clean_path = "index.html"
         target = (config.WEB_DIR / clean_path).resolve()
-        
+
         # Ngăn chặn Path Traversal
         if config.WEB_DIR.resolve() not in target.parents and target != config.WEB_DIR / "index.html":
             return self._send(404, b"Not found", "text/plain")
         if not target.is_file():
-            # Thử tìm file index.html
             target = config.WEB_DIR / "index.html"
             if not target.is_file():
                 return self._send(404, b"Not found", "text/plain")
@@ -99,11 +159,18 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             self._send(500, b"Internal Error", "text/plain")
 
-    def _json(self, payload):
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self._send(200, body, "application/json")
+    def _redirect(self, location):
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.end_headers()
 
-    def _send(self, code, body, content_type):
+    def _json(self, payload, code=200, cookies=None):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self._send(code, body, "application/json", cookies=cookies)
+
+    def _send(self, code, body, content_type, cookies=None):
         self.send_response(code)
         if content_type.startswith("text/") or content_type in ("application/javascript", "application/json"):
             content_type += "; charset=utf-8"
@@ -111,11 +178,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Access-Control-Allow-Origin", "*")
+        if cookies:
+            for c in cookies:
+                self.send_header("Set-Cookie", c)
         self.end_headers()
         self.wfile.write(body)
 
     def log_message(self, format, *args):
-        # Tắt bớt log HTTP để terminal gọn gàng
         pass
 
 
@@ -129,6 +198,7 @@ def run():
     print(f"  NetMon - Giám sát mạng MikroTik qua SNMP")
     print(f"  Giao diện: http://localhost:{config.HTTP_PORT}")
     print(f"  Router IP: {config.ROUTER_IP} (community: {config.SNMP_COMMUNITY})")
+    print(f"  Trạng thái bảo mật: Đã kích hoạt xác thực người dùng")
     print(f"============================================================")
     server = ThreadingHTTPServer(("0.0.0.0", config.HTTP_PORT), Handler)
     try:

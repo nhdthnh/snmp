@@ -2,7 +2,7 @@
  * Hàng / Bảng [Image 1 & Image 4]: "Interfaces"
  * Bảng thông tin chi tiết các cổng: Type, Name, Status UP/DOWN, Link down count,
  * MAC, Rate, MTU, RX Sum, TX Sum, ifIndex 1, ifIndex 2.
- * Hỗ trợ sắp xếp (sort), tìm kiếm (search), lọc loại cổng, và click để xem biểu đồ chi tiết.
+ * Hỗ trợ Router HQ, Router BOB và chế độ Tất cả 2 Router (HQ + BOB).
  */
 import { escapeHtml, fmtBytes, fmtRate } from "../format.js";
 
@@ -30,17 +30,82 @@ export const InterfacesTableRow = {
   filterType: "all",
   searchQuery: "",
   lastStatus: null,
+  activeRouter: "all",
 
-  sortedRows(interfaces) {
-    let rows = Object.entries(interfaces || {}).map(([name, info]) => ({
-      name,
-      ...info,
-    }));
+  initControls() {
+    const searchInput = document.getElementById("if-search-input");
+    const typeSelect = document.getElementById("if-type-select");
+    const thead = document.getElementById("interfaces-table-head");
+
+    if (searchInput) {
+      searchInput.oninput = ev => {
+        this.searchQuery = ev.target.value.trim();
+        if (this.lastStatus) this.render(this.lastStatus, this.activeRouter);
+      };
+    }
+
+    if (typeSelect) {
+      typeSelect.onchange = ev => {
+        this.filterType = ev.target.value;
+        if (this.lastStatus) this.render(this.lastStatus, this.activeRouter);
+      };
+    }
+
+    if (thead) {
+      thead.onclick = ev => {
+        const th = ev.target.closest("th.sortable");
+        if (!th) return;
+        const key = th.dataset.key;
+        if (this.sortKey === key) {
+          this.sortDir *= -1;
+        } else {
+          this.sortKey = key;
+          this.sortDir = 1;
+        }
+        if (this.lastStatus) this.render(this.lastStatus, this.activeRouter);
+      };
+    }
+  },
+
+  sortedRows(status, activeRouter = "all") {
+    const isBob = activeRouter === "bob";
+    const isHq = activeRouter === "hq";
+    const isAll = !isBob && !isHq;
+
+    let rows = [];
+
+    if (isHq || isAll) {
+      const hqIfs = status?.routers?.hq?.interfaces || status?.interfaces || {};
+      for (const [name, info] of Object.entries(hqIfs)) {
+        rows.push({
+          name,
+          router: "HQ",
+          rtrKey: "hq",
+          ...info,
+        });
+      }
+    }
+
+    if (isBob || isAll) {
+      const bobIfs = status?.routers?.bob?.interfaces || {};
+      for (const [name, info] of Object.entries(bobIfs)) {
+        rows.push({
+          name,
+          router: "BOB",
+          rtrKey: "bob",
+          ...info,
+        });
+      }
+    }
 
     // Lọc theo search
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
-      rows = rows.filter(r => r.name.toLowerCase().includes(q) || (r.mac && r.mac.toLowerCase().includes(q)));
+      rows = rows.filter(r => 
+        r.name.toLowerCase().includes(q) || 
+        (r.mac && r.mac.toLowerCase().includes(q)) ||
+        (r.router && r.router.toLowerCase().includes(q))
+      );
     }
 
     // Lọc theo loại interface
@@ -64,8 +129,9 @@ export const InterfacesTableRow = {
     return rows;
   },
 
-  render(status) {
+  render(status, activeRouter = "all") {
     this.lastStatus = status;
+    this.activeRouter = activeRouter;
     const table = document.getElementById("interfaces-table-body");
     const thead = document.getElementById("interfaces-table-head");
     if (!table || !thead) return;
@@ -83,61 +149,45 @@ export const InterfacesTableRow = {
     `;
 
     // Dữ liệu bảng
-    const rows = this.sortedRows(status?.interfaces);
+    const rows = this.sortedRows(status, activeRouter);
     if (!rows.length) {
       table.innerHTML = `<tr><td colspan="${COLUMNS.length}" class="text-center muted p-3">Không có cổng nào phù hợp</td></tr>`;
       return;
     }
 
-    table.innerHTML = rows.map(i => `
-      <tr class="if-row" data-name="${escapeHtml(i.name)}">
-        ${COLUMNS.map(c => `
-          <td class="${c.num ? "text-right" : "text-left"}">
-            ${c.cell ? c.cell(i) : escapeHtml(i[c.key])}
-          </td>
-        `).join("")}
-      </tr>
-    `).join("");
+    const isAll = activeRouter === "all";
 
-    // Bắt sự kiện click
-    thead.onclick = ev => {
-      const th = ev.target.closest("th[data-key]");
-      if (th) {
-        const key = th.dataset.key;
-        this.sortDir = this.sortKey === key ? -this.sortDir : 1;
-        this.sortKey = key;
-        this.render(this.lastStatus);
-      }
-    };
+    table.innerHTML = rows.map(i => {
+      const rtrBadge = isAll 
+        ? (i.router === "BOB" 
+            ? '<span class="badge badge-bob" style="font-size:10px; margin-right:6px; padding:1px 5px;">BOB</span>' 
+            : '<span class="badge badge-hq" style="font-size:10px; margin-right:6px; padding:1px 5px;">HQ</span>')
+        : "";
 
-    table.onclick = ev => {
-      const tr = ev.target.closest("tr[data-name]");
-      if (tr) {
-        const ifaceName = tr.dataset.name;
-        window.dispatchEvent(new CustomEvent("netmon:focus-interface", { detail: { name: ifaceName } }));
-      }
-    };
-  },
+      return `
+        <tr class="if-row" data-name="${escapeHtml(i.name)}">
+          ${COLUMNS.map(c => {
+            if (c.key === "name") {
+              return `<td class="text-left">${rtrBadge}<b>${escapeHtml(i.name)}</b></td>`;
+            }
+            return `
+              <td class="${c.num ? "text-right" : "text-left"}">
+                ${c.cell ? c.cell(i) : escapeHtml(i[c.key])}
+              </td>
+            `;
+          }).join("")}
+        </tr>
+      `;
+    }).join("");
 
-  initControls() {
-    const searchInput = document.getElementById("if-search-input");
-    const typeSelect = document.getElementById("if-type-select");
-
-    if (searchInput) {
-      searchInput.oninput = ev => {
-        this.searchQuery = ev.target.value.trim();
-        if (this.lastStatus) this.render(this.lastStatus);
+    // Click vào hàng để chuyển sang tab traffic
+    table.querySelectorAll("tr.if-row").forEach(tr => {
+      tr.onclick = () => {
+        const name = tr.dataset.name;
+        if (name) {
+          window.dispatchEvent(new CustomEvent("netmon:focus-interface", { detail: { name } }));
+        }
       };
-    }
-    if (typeSelect) {
-      typeSelect.onchange = ev => {
-        this.filterType = ev.target.value;
-        if (this.lastStatus) this.render(this.lastStatus);
-      };
-    }
-  },
-
-  load(range, status) {
-    this.render(status);
+    });
   },
 };
