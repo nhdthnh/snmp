@@ -1,6 +1,7 @@
 /**
  * Thư viện vẽ biểu đồ Canvas hiệu năng cao (chart.js).
  * Đảm bảo tỷ lệ khung hình 1:1, không bị co giãn chữ, không đè nhãn X/Y.
+ * Hỗ trợ Responsive hoàn hảo trên Mobile, Tablet và Desktop.
  */
 import { fmtTime } from "./format.js";
 
@@ -19,7 +20,6 @@ export const PALETTE = [
   "#ffb74d", // Cam nhạt
 ];
 
-const PAD = { left: 78, right: 22, top: 18, bottom: 28 };
 const GRID_COLOR = "rgba(255, 255, 255, 0.08)";
 const TEXT_COLOR = "#8b949e";
 
@@ -74,6 +74,15 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
 
   const dpr = window.devicePixelRatio || 1;
 
+  // Responsive padding: co giãn lề trục Y để tối ưu diện tích trên màn hình điện thoại & máy tính bảng
+  const isMobile = width < 480;
+  const isTablet = width < 768;
+  const padLeft = isMobile ? 48 : (isTablet ? 60 : 78);
+  const padRight = isMobile ? 12 : 22;
+  const padTop = 18;
+  const padBottom = isMobile ? 24 : 28;
+  const pad = { left: padLeft, right: padRight, top: padTop, bottom: padBottom };
+
   // Đặt kích thước style tường minh để trình duyệt không tự kéo giãn (stretch) bitmap
   canvas.style.width = width + "px";
   canvas.style.height = height + "px";
@@ -99,24 +108,24 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
   }
   const topY = options.maxY != null ? options.maxY : niceCeil(maxVal * 1.05 || 1);
 
-  const xMap = t => PAD.left + ((t - startTs) / range) * (width - PAD.left - PAD.right);
-  const yMap = v => PAD.top + (1 - Math.max(0, v) / topY) * (height - PAD.top - PAD.bottom);
+  const xMap = t => pad.left + ((t - startTs) / range) * (width - pad.left - pad.right);
+  const yMap = v => pad.top + (1 - Math.max(0, v) / topY) * (height - pad.top - pad.bottom);
 
   // Vẽ lưới ngang và nhãn trục Y
-  ctx.font = "11px system-ui, -apple-system, sans-serif";
+  ctx.font = isMobile ? "10px system-ui, -apple-system, sans-serif" : "11px system-ui, -apple-system, sans-serif";
   ctx.fillStyle = TEXT_COLOR;
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
 
-  const ySteps = 4;
+  const ySteps = isMobile ? 3 : 4;
   for (let i = 0; i <= ySteps; i++) {
     const val = (topY / ySteps) * i;
     const y = yMap(val);
     
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.moveTo(PAD.left, y);
-    ctx.lineTo(width - PAD.right, y);
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(width - pad.right, y);
     ctx.stroke();
 
     ctx.setLineDash([]);
@@ -125,11 +134,11 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
     // Nâng nhãn số 0 lên 4px để không đè vào dòng thời gian trục X
     const labelY = (i === 0) ? y - 4 : (i === ySteps) ? y + 4 : y;
     ctx.textBaseline = "middle";
-    ctx.fillText(formatY(val), PAD.left - 8, labelY);
+    ctx.fillText(formatY(val), pad.left - 6, labelY);
   }
 
-  // Vẽ mốc thời gian trục X (tránh đè nhau với nhãn trục Y)
-  const xPoints = [0, 0.25, 0.5, 0.75, 1.0];
+  // Vẽ mốc thời gian trục X (tự động điều chỉnh số mốc trên Mobile để không bị đè nhãn)
+  const xPoints = isMobile ? [0, 0.5, 1.0] : isTablet ? [0, 0.33, 0.66, 1.0] : [0, 0.25, 0.5, 0.75, 1.0];
   ctx.textBaseline = "bottom";
   for (let idx = 0; idx < xPoints.length; idx++) {
     const frac = xPoints[idx];
@@ -137,10 +146,10 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
     const x = xMap(t);
     if (idx === 0) {
       ctx.textAlign = "left";
-      ctx.fillText(fmtTime(t), PAD.left + 4, height - 6);
+      ctx.fillText(fmtTime(t), pad.left + 4, height - 6);
     } else if (idx === xPoints.length - 1) {
       ctx.textAlign = "right";
-      ctx.fillText(fmtTime(t), width - PAD.right - 4, height - 6);
+      ctx.fillText(fmtTime(t), width - pad.right - 4, height - 6);
     } else {
       ctx.textAlign = "center";
       ctx.fillText(fmtTime(t), x, height - 6);
@@ -164,7 +173,7 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
       ctx.lineTo(xMap(pts[pts.length - 1][0]), yMap(0));
       ctx.closePath();
       
-      const grad = ctx.createLinearGradient(0, PAD.top, 0, height - PAD.bottom);
+      const grad = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
       grad.addColorStop(0, hexToRgba(color, 0.35));
       grad.addColorStop(1, hexToRgba(color, 0.02));
       ctx.fillStyle = grad;
@@ -194,14 +203,16 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
     }
   }
 
-  // Xử lý sự kiện di chuột (Hover Tooltip)
-  canvas.onmousemove = ev => {
-    const mouseX = ev.offsetX;
-    if (mouseX < PAD.left || mouseX > width - PAD.right) {
+  // Xử lý sự kiện di chuột & cảm ứng chạm trên điện thoại/máy tính bảng (Hover & Touch Tooltip)
+  const handlePointer = (clientX, clientY) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+    if (mouseX < pad.left || mouseX > width - pad.right) {
       hideTip(canvas);
       return;
     }
-    const tHover = startTs + ((mouseX - PAD.left) / (width - PAD.left - PAD.right)) * range;
+    const tHover = startTs + ((mouseX - pad.left) / (width - pad.left - pad.right)) * range;
     
     const values = [];
     for (const s of seriesList) {
@@ -218,10 +229,25 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
       values.push({ name: s.name, color: s.color, val: nearest[1] });
     }
 
-    showTip(canvas, mouseX, ev.offsetY, tHover, values, formatY);
+    showTip(canvas, mouseX, mouseY, tHover, values, formatY);
   };
 
+  canvas.onmousemove = ev => handlePointer(ev.clientX, ev.clientY);
   canvas.onmouseleave = () => hideTip(canvas);
+
+  canvas.ontouchstart = ev => {
+    if (ev.touches.length === 1) {
+      handlePointer(ev.touches[0].clientX, ev.touches[0].clientY);
+    }
+  };
+  canvas.ontouchmove = ev => {
+    if (ev.touches.length === 1) {
+      handlePointer(ev.touches[0].clientX, ev.touches[0].clientY);
+    }
+  };
+  canvas.ontouchend = () => {
+    setTimeout(() => hideTip(canvas), 2500);
+  };
 }
 
 function hexToRgba(hex, alpha = 1) {

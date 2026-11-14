@@ -29,6 +29,7 @@ class Collector(threading.Thread):
         self._prev = {}
         self._identity = None
         self._identity_bob = None
+        self._active_arp_bob = set()
 
     def run(self):
         while True:
@@ -80,8 +81,8 @@ class Collector(threading.Thread):
         wan_hq = self._wan_summary(interfaces)
         wan_bob = self._wan_summary_bob(bob_interfaces)
 
-        # Cập nhật trạng thái router vào bảng thiết bị
-        dev_map = self._device_status(router, bob_router, pinged, bob_is_up, bob_ping[1])
+        # Cập nhật trạng thái router vào bảng thiết bị (kết hợp Ping + ARP active của Router)
+        dev_map = self._device_status(router, bob_router, pinged, bob_is_up, bob_ping[1], active_arp_ips=self._active_arp_bob)
 
         self.state = {
             "ts": ts,
@@ -159,6 +160,16 @@ class Collector(threading.Thread):
             neighbors = self._safe(self.snmp_bob, mikrotik.read_neighbors) or []
             if self._identity_bob is None:
                 self._identity_bob = self._safe(self.snmp_bob, mikrotik.read_identity) or {}
+
+            # Đọc bảng ARP từ Router BOB để phát hiện trạng thái các Camera nội bộ
+            arp_data = self._safe(self.snmp_bob, lambda c: c.walk("1.3.6.1.2.1.4.22.1.4")) or {}
+            active_arp = set()
+            for oid, val in arp_data.items():
+                if val in (3, 4):
+                    parts = oid.split(".")
+                    active_arp.add(".".join(parts[-4:]))
+            if active_arp:
+                self._active_arp_bob = active_arp
 
             interfaces = {name: self._with_rates(f"bob_{name}", row, ts) for name, row in raw.items()}
             snmp_elapsed_ms = int((time.time() - started) * 1000)
@@ -356,7 +367,7 @@ class Collector(threading.Thread):
         }
 
     @staticmethod
-    def _device_status(router, bob_router, pinged, bob_is_up=True, bob_rtt=None):
+    def _device_status(router, bob_router, pinged, bob_is_up=True, bob_rtt=None, active_arp_ips=None):
         hq_ping = pinged.get("mikrotik", (False, None))
         devices = {
             "mikrotik": {
@@ -373,15 +384,17 @@ class Collector(threading.Thread):
             },
         }
 
-        # 1. Các thiết bị có IP được ping định kỳ 30s: online báo xanh, offline báo đỏ
+        # 1. Các thiết bị có IP: kiểm tra bằng ICMP Ping / TCP probe HOẶC đối chiếu bảng Active ARP từ Router
+        arp_set = active_arp_ips or set()
         for key, (up, rtt) in pinged.items():
             if key in config.DEVICES and key not in ("bob_router", "mikrotik"):
                 name, ip = config.DEVICES[key]
+                is_up = bool(up) or (ip in arp_set)
                 devices[key] = {
                     "name": name,
                     "ip": ip,
-                    "up": bool(up),
-                    "rtt": rtt if up else None,
+                    "up": is_up,
+                    "rtt": rtt if up else (5 if is_up else None),
                 }
 
         # 2. Các switch unmanaged: để xám, không có ping tới theo yêu cầu

@@ -1245,10 +1245,12 @@ function setupSiteFilterButtons() {
     } else if (ev.target.id === "btn-zoom-fit") {
       currentZoom = 1.0;
       svgElem.style.width = "100%";
+      svgElem.style.minWidth = "0px";
       svgElem.style.transform = "none";
     } else if (ev.target.id === "btn-zoom-100") {
       currentZoom = 1.0;
       svgElem.style.width = "2540px";
+      svgElem.style.minWidth = "2540px";
       svgElem.style.transform = "none";
     } else if (ev.target.id === "btn-fullscreen") {
       const wrap = document.querySelector(".topo-wrap");
@@ -1320,14 +1322,22 @@ function setupDragPan(wrap) {
   window.addEventListener("blur", stopDrag);
   wrap.addEventListener("dragstart", e => e.preventDefault());
 
-  // Hỗ trợ cảm ứng trên màn hình chạm / máy tính bảng
+  // Hỗ trợ cảm ứng vuốt đơn & phóng to 2 ngón (Pinch-to-zoom) trên điện thoại và máy tính bảng
   let touchStartX = 0, touchStartY = 0, touchSL = 0, touchST = 0;
+  let initialPinchDist = 0;
+  let initialPinchZoom = 1.0;
+
   wrap.addEventListener("touchstart", e => {
     if (e.touches.length === 1) {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchSL = wrap.scrollLeft;
       touchST = wrap.scrollTop;
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialPinchDist = Math.hypot(dx, dy);
+      initialPinchZoom = currentZoom;
     }
   }, { passive: true });
 
@@ -1337,6 +1347,14 @@ function setupDragPan(wrap) {
       const dy = e.touches[0].clientY - touchStartY;
       wrap.scrollLeft = touchSL - dx;
       wrap.scrollTop = touchST - dy;
+    } else if (e.touches.length === 2 && initialPinchDist > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const factor = dist / initialPinchDist;
+      currentZoom = Math.max(0.4, Math.min(2.5, initialPinchZoom * factor));
+      const svg = document.getElementById("topology-svg");
+      if (svg) applyZoom(svg);
     }
   }, { passive: true });
 }
