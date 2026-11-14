@@ -3,7 +3,7 @@
  * Biểu đồ diện tích lưu lượng đa interface kèm bảng chú giải thống kê Mean / Last / Max ở bên phải.
  * Hỗ trợ vẽ đồng thời các cổng chính của cả 2 Router (HQ & BOB).
  */
-import { fmtBps } from "../format.js";
+import { fmtBps, escapeHtml } from "../format.js";
 import { PALETTE, renderLineChart, calcSeriesStats } from "../chart.js";
 import { fetchTraffic, pickColumn } from "../api.js";
 
@@ -102,6 +102,7 @@ export const TrafficBasicRow = {
 
     renderLineChart(canvas, seriesList, {
       range,
+      height: 260,
       formatY: fmtBps,
       fill: true,
     });
