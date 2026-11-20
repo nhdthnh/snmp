@@ -3,6 +3,9 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.db-journal
+data/sessions.json
+data/ai_analysis.json
+scratch/
 *.sqlite
 *.sqlite3
 
@@ -18,6 +21,7 @@ venv/
 .DS_Store
 Thumbs.db
 
-# ── File cấu hình chứa mật khẩu/SNMP community (bỏ comment nếu có) ──
-# .env
-# netmon/config.local.py
+# ── File cấu hình chứa mật khẩu/SNMP community/API Keys (không đưa lên git) ──
+.env
+*config_local.py
+*config.local.py

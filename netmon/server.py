@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import auth, config
+from .ai_analyzer import AiAnalyzer
 from .collector import Collector
 from .storage import MetricStore
 
@@ -20,10 +21,12 @@ mimetypes.add_type("application/json", ".json")
 class Handler(BaseHTTPRequestHandler):
     collector: Collector = None
     store: MetricStore = None
+    ai_analyzer: AiAnalyzer = None
 
     def do_POST(self):
         url = urlparse(self.path)
         path = url.path
+        is_auth = auth.is_authenticated(self.headers)
 
         if path == "/api/login":
             content_length = int(self.headers.get("Content-Length", 0))
@@ -48,6 +51,27 @@ class Handler(BaseHTTPRequestHandler):
                 auth.logout(token)
             cookie = "netmon_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly"
             self._json({"ok": True}, cookies=[cookie])
+        elif path == "/api/ai-analyze-now":
+            if not is_auth:
+                return self._json({"error": "Unauthorized", "login_url": "/login.html"}, code=401)
+            ok = self.ai_analyzer.trigger_now() if self.ai_analyzer else False
+            self._json({
+                "ok": ok,
+                "message": "Đã bắt đầu chu kỳ phân tích lưu lượng AI..." if ok else "AI đang trong quá trình phân tích, vui lòng đợi..."
+            })
+        elif path == "/api/topology-config":
+            if not is_auth:
+                return self._json({"error": "Unauthorized", "login_url": "/login.html"}, code=401)
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            try:
+                cfg = json.loads(raw_body.decode("utf-8"))
+                cfg_path = config.DATA_DIR / "topology_config.json"
+                cfg_path.parent.mkdir(parents=True, exist_ok=True)
+                cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+                self._json({"ok": True, "message": "Đã lưu cấu hình sơ đồ và IP thành công!"})
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)}, code=400)
         else:
             self._send(404, b"Not found", "text/plain")
 
@@ -90,6 +114,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_summary(query)
             elif path == "/api/history":
                 self._handle_history(query)
+            elif path == "/api/ai-analysis":
+                data = self.ai_analyzer.get_latest_analysis() if self.ai_analyzer else {}
+                self._json({"ok": True, "data": data})
+            elif path == "/api/topology-config":
+                cfg_path = config.DATA_DIR / "topology_config.json"
+                if cfg_path.is_file():
+                    try:
+                        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                        self._json({"ok": True, "config": cfg})
+                        return
+                    except Exception:
+                        pass
+                self._json({"ok": False, "error": "Chưa có file topology_config.json"})
             else:
                 self._send(404, b"Not found", "text/plain")
             return
@@ -192,12 +229,16 @@ def run():
     store = MetricStore(config.DB_PATH)
     collector = Collector(store)
     collector.start()
+    ai_analyzer = AiAnalyzer(collector)
+    ai_analyzer.start()
     Handler.collector = collector
     Handler.store = store
+    Handler.ai_analyzer = ai_analyzer
     print(f"============================================================")
     print(f"  NetMon - Giám sát mạng MikroTik qua SNMP")
     print(f"  Giao diện: http://localhost:{config.HTTP_PORT}")
     print(f"  Router IP: {config.ROUTER_IP} (community: {config.SNMP_COMMUNITY})")
+    print(f"  Trợ lý AI: Model mục tiêu {config.AI_PRIMARY_MODEL} (Chu kỳ {config.AI_ANALYSIS_INTERVAL // 60}m)")
     print(f"  Trạng thái bảo mật: Đã kích hoạt xác thực người dùng")
     print(f"============================================================")
     server = ThreadingHTTPServer(("0.0.0.0", config.HTTP_PORT), Handler)

@@ -11,6 +11,7 @@
  * 5. Giữ nguyên 100% nguyên tắc đấu nối cáp và nhãn cổng giữa các switch!
  */
 import { fmtBps, escapeHtml } from "../format.js";
+import { fetchTopologyConfig, saveTopologyConfig } from "../api.js";
 
 // ViewBox cắt sát vào vùng có nội dung (bỏ lề trống) để khi Fit sơ đồ được phóng to tối đa
 const VIEW_BOX_ALL = "270 0 2250 1990";
@@ -161,11 +162,11 @@ const ORTHO_LINKS = [
     badgePos: { x: 1420, y: 165 },
   },
 
-  // TRUNK LINE: MikroTik RB3011UiAS <-> SW CORE Ruijie (ether5 <-> p2)
+  // UPLINK LINE: MikroTik RB3011UiAS <-> SW CORE Ruijie (ether3 <-> p2)
   {
-    from: "mikrotik", to: "core", ifName: "ether5",
+    from: "mikrotik", to: "core", ifName: "ether3",
     path: "M 1180 282 V 435",
-    pFrom: "ether5", pFromPos: { x: 1180, y: 300 },
+    pFrom: "ether3", pFromPos: { x: 1180, y: 300 },
     pTo: "p2", pToPos: { x: 1180, y: 410 },
     badgePos: { x: 1290, y: 360 },
   },
@@ -378,6 +379,16 @@ export const TopologyRow = {
   render(status) {
     const svg = document.getElementById("topology-svg");
     if (!svg) return;
+
+    if (!this._configLoaded) {
+      this._configLoaded = true;
+      fetchTopologyConfig().then(cfg => {
+        if (cfg) {
+          this.applyConfigToModel(cfg);
+          this.render(status);
+        }
+      }).catch(e => console.warn("Init config fetch error:", e));
+    }
 
     const ifaces = status.interfaces || {};
     const bobIfaces = status.routers?.bob?.interfaces || {};
@@ -763,6 +774,234 @@ export const TopologyRow = {
     const wrap = document.querySelector(".topo-wrap");
     if (wrap) setupDragPan(wrap);
   },
+
+  currentConfig: null,
+  _configLoaded: false,
+
+  applyConfigToModel(cfg) {
+    if (!cfg) return;
+    this.currentConfig = cfg;
+
+    // 1. Cập nhật Uplink
+    if (cfg.hq_uplink) {
+      const coreLink = ORTHO_LINKS.find(l => l.from === "mikrotik" && l.to === "core");
+      if (coreLink) {
+        if (cfg.hq_uplink.router_port) coreLink.pFrom = cfg.hq_uplink.router_port;
+        if (cfg.hq_uplink.switch_port) coreLink.pTo = cfg.hq_uplink.switch_port;
+        if (cfg.hq_uplink.ifName) coreLink.ifName = cfg.hq_uplink.ifName;
+      }
+    }
+
+    // 2. Cập nhật Devices & IP
+    if (Array.isArray(cfg.devices)) {
+      cfg.devices.forEach(d => {
+        const node = NODES.find(n => n.id === d.id);
+        if (node) {
+          if (d.name) node.label = d.name;
+          if (d.ip && d.ip !== "Unmanaged") {
+            node.sub = `${d.ip} (${d.port || d.id})`;
+          }
+        }
+      });
+    }
+
+    // 3. Cập nhật Links
+    if (Array.isArray(cfg.links)) {
+      cfg.links.forEach(l => {
+        const ortho = ORTHO_LINKS.find(ol => ol.from === l.from && ol.to === l.to);
+        if (ortho) {
+          if (l.pFrom) ortho.pFrom = l.pFrom;
+          if (l.pTo) ortho.pTo = l.pTo;
+          if (l.ifName) ortho.ifName = l.ifName;
+        }
+      });
+    }
+  },
+
+  async openConfigModal() {
+    const modal = document.getElementById("topo-config-modal");
+    if (!modal) return;
+    modal.style.display = "flex";
+
+    this.bindModalTabs();
+    this.bindModalButtons();
+
+    try {
+      this.currentConfig = await fetchTopologyConfig();
+    } catch (e) {
+      console.warn("Could not fetch topology config:", e);
+    }
+
+    this.populateModal(this.currentConfig);
+  },
+
+  closeConfigModal() {
+    const modal = document.getElementById("topo-config-modal");
+    if (modal) modal.style.display = "none";
+  },
+
+  bindModalTabs() {
+    const modal = document.getElementById("topo-config-modal");
+    if (!modal) return;
+    const tabs = modal.querySelectorAll(".topo-m-tab");
+    tabs.forEach(tab => {
+      tab.onclick = () => {
+        tabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        const targetId = tab.dataset.tab;
+        modal.querySelectorAll(".topo-tab-pane").forEach(p => {
+          p.style.display = p.id === targetId ? "block" : "none";
+        });
+      };
+    });
+  },
+
+  bindModalButtons() {
+    const closeBtn = document.getElementById("topo-modal-close-btn");
+    const cancelBtn = document.getElementById("topo-modal-cancel-btn");
+    const saveBtn = document.getElementById("topo-modal-save-btn");
+
+    if (closeBtn) closeBtn.onclick = () => this.closeConfigModal();
+    if (cancelBtn) cancelBtn.onclick = () => this.closeConfigModal();
+    if (saveBtn) saveBtn.onclick = () => this.saveModalConfig();
+
+    const searchInput = document.getElementById("cfg-device-search");
+    if (searchInput) {
+      searchInput.oninput = ev => {
+        const query = ev.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll("#cfg-devices-tbody tr");
+        rows.forEach(tr => {
+          const text = tr.textContent.toLowerCase();
+          tr.style.display = !query || text.includes(query) ? "" : "none";
+        });
+      };
+    }
+
+    const searchLink = document.getElementById("cfg-link-search");
+    if (searchLink) {
+      searchLink.oninput = ev => {
+        const query = ev.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll("#cfg-links-tbody tr");
+        rows.forEach(tr => {
+          const text = tr.textContent.toLowerCase() + " " + Array.from(tr.querySelectorAll("input")).map(i => i.value.toLowerCase()).join(" ");
+          tr.style.display = !query || text.includes(query) ? "" : "none";
+        });
+      };
+    }
+  },
+
+  populateModal(cfg) {
+    if (!cfg) return;
+
+    // 1. Tab Devices & IP
+    const tbodyDev = document.getElementById("cfg-devices-tbody");
+    if (tbodyDev && cfg.devices) {
+      tbodyDev.innerHTML = cfg.devices.map((d, idx) => `
+        <tr data-id="${escapeHtml(d.id)}">
+          <td><code class="cfg-dev-id">${escapeHtml(d.id)}</code></td>
+          <td><input type="text" class="topo-table-input dev-name-input" value="${escapeHtml(d.name || "")}"></td>
+          <td><input type="text" class="topo-table-input dev-ip-input cfg-input-ip" value="${escapeHtml(d.ip || "")}"></td>
+          <td><span class="badge-${d.site === 'bob' ? 'bob' : 'hq'}">${escapeHtml(d.site?.toUpperCase() || "HQ")}</span></td>
+          <td><span class="cfg-type-tag">${escapeHtml(d.type || "")}</span></td>
+          <td><input type="text" class="topo-table-input dev-port-input" value="${escapeHtml(d.port || "")}"></td>
+        </tr>
+      `).join("");
+    }
+
+    // 2. Tab Links & Ports
+    const tbodyLinks = document.getElementById("cfg-links-tbody");
+    if (tbodyLinks && cfg.links) {
+      tbodyLinks.innerHTML = cfg.links.map((l, idx) => `
+        <tr data-idx="${idx}">
+          <td><code class="cfg-link-from">${escapeHtml(l.from)}</code></td>
+          <td><input type="text" class="topo-table-input link-pfrom-input cfg-input-port" value="${escapeHtml(l.pFrom || "")}"></td>
+          <td><code class="cfg-link-to">${escapeHtml(l.to)}</code></td>
+          <td><input type="text" class="topo-table-input link-pto-input" value="${escapeHtml(l.pTo || "")}"></td>
+          <td><input type="text" class="topo-table-input link-ifname-input" value="${escapeHtml(l.ifName || "")}"></td>
+          <td><input type="text" class="topo-table-input link-desc-input" value="${escapeHtml(l.desc || "")}"></td>
+        </tr>
+      `).join("");
+    }
+  },
+
+  async saveModalConfig() {
+    const saveBtn = document.getElementById("topo-modal-save-btn");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Đang lưu cấu hình...";
+    }
+
+    try {
+      // 1. Thu thập bảng Devices
+      const updatedDevices = [];
+      document.querySelectorAll("#cfg-devices-tbody tr").forEach(tr => {
+        const id = tr.dataset.id;
+        const name = tr.querySelector(".dev-name-input")?.value || "";
+        const ip = tr.querySelector(".dev-ip-input")?.value || "";
+        const port = tr.querySelector(".dev-port-input")?.value || "";
+        const existing = this.currentConfig?.devices?.find(d => d.id === id) || {};
+        updatedDevices.push({ ...existing, id, name, ip, port });
+
+        // Cập nhật nhãn node in-memory
+        const node = NODES.find(n => n.id === id);
+        if (node) {
+          node.label = name;
+          if (ip && ip !== "Unmanaged") {
+            node.sub = `${ip} (${port || id})`;
+          }
+        }
+      });
+
+      // 2. Thu thập bảng Links
+      const updatedLinks = [];
+      document.querySelectorAll("#cfg-links-tbody tr").forEach((tr, idx) => {
+        const existing = this.currentConfig?.links?.[idx] || {};
+        const pFrom = tr.querySelector(".link-pfrom-input")?.value || existing.pFrom;
+        const pTo = tr.querySelector(".link-pto-input")?.value || existing.pTo;
+        const linkIfName = tr.querySelector(".link-ifname-input")?.value || existing.ifName;
+        const desc = tr.querySelector(".link-desc-input")?.value || existing.desc;
+        updatedLinks.push({ ...existing, pFrom, pTo, ifName: linkIfName, desc });
+      });
+
+      // 3. Cập nhật cấu hình Ruijie Core Switch từ bảng Links
+      const coreLink = updatedLinks.find(l => l.from === "mikrotik" && l.to === "core") || {};
+      const rtrPort = coreLink.pFrom || "ether3";
+      const swPort = coreLink.pTo || "p2";
+      const ifName = coreLink.ifName || rtrPort;
+
+      const newConfig = {
+        version: "1.0",
+        updated_at: new Date().toISOString(),
+        hq_uplink: {
+          from: "mikrotik",
+          to: "core",
+          router_port: rtrPort,
+          switch_port: swPort,
+          mode: "LAN (Access / Không Trunk)",
+          ifName: ifName,
+        },
+        devices: updatedDevices,
+        links: updatedLinks,
+      };
+
+      await saveTopologyConfig(newConfig);
+      this.currentConfig = newConfig;
+      this.applyConfigToModel(newConfig);
+
+      // Vẽ lại sơ đồ ngay lập tức
+      window.dispatchEvent(new CustomEvent("netmon:refresh-topology"));
+
+      alert("✓ Đã lưu cấu hình và cập nhật sơ đồ mạng thành công!");
+      this.closeConfigModal();
+    } catch (err) {
+      alert("Lỗi lưu cấu hình: " + err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "💾 Lưu Cấu Hình & Cập Nhật Sơ Đồ Ngay";
+      }
+    }
+  },
 };
 
 /**
@@ -851,6 +1090,12 @@ function renderCoreCentralCard(n, isUp, isDown, isStatic) {
   const tagColor = isCore ? "#38bdf8" : "#c084fc";
   const modelName = isCore ? "Ruijie Reyee RG-ES224GC (24G + 2 SFP)" : "TP-Link TL-SG116 (16-Port Gigabit Switch)";
 
+  const uplinkCfg = TopologyRow.currentConfig?.hq_uplink || {};
+  const coreRtrPort = uplinkCfg.router_port || "ether3";
+  const coreSwPort = uplinkCfg.switch_port || "p2";
+  const coreModeStr = uplinkCfg.mode && uplinkCfg.mode.includes("Trunk") && !uplinkCfg.mode.includes("Không") ? " (Trunk)" : "";
+  const coreUplinkTitle = `▲ ${coreSwPort}${coreModeStr} ⟷ Mikrotik ${coreRtrPort}`;
+
   return `
     <text x="14" y="30" font-size="13" font-weight="800" fill="#ffffff">${escapeHtml(n.label)}</text>
     <text x="14" y="44" font-size="10.5" font-family="ui-monospace, monospace" font-weight="600" fill="#93c5fd">${escapeHtml(n.sub)}</text>
@@ -879,7 +1124,7 @@ function renderCoreCentralCard(n, isUp, isDown, isStatic) {
     <g transform="translate(14, 112)">
       <rect width="372" height="${isCore ? 172 : 152}" rx="6" fill="#060a12" stroke="${strokeAccent}" stroke-width="1.2"/>
       <text x="186" y="20" text-anchor="middle" font-size="11.5" font-weight="700" fill="${tagColor}">
-        ${isCore ? "▲ p2 (Trunk) ⟷ Mikrotik ether5" : "▲ P.1 (Uplink) ⟷ hAP ac² ether2"}
+        ${isCore ? coreUplinkTitle : "▲ P.1 (Uplink) ⟷ hAP ac² ether2"}
       </text>
       <line x1="12" y1="28" x2="360" y2="28" stroke="rgba(255,255,255,0.12)"/>
       
@@ -1216,7 +1461,8 @@ function setupSiteFilterButtons() {
         <button class="zoom-btn" id="btn-zoom-out" title="Thu nhỏ">🔍 -</button>
         <button class="zoom-btn" id="btn-zoom-fit" title="Vừa màn hình">⟲ Fit</button>
         <button class="zoom-btn" id="btn-zoom-100" title="Kích thước chuẩn 100%">100%</button>
-        <button class="zoom-btn" id="btn-fullscreen" title="Xem sơ đồ toàn màn hình" style="border-color:#38bdf8; color:#38bdf8;">⛶ Toàn màn hình</button>
+        <button class="zoom-btn" id="btn-fullscreen" title="Xem sơ đồ toàn màn hình">⛶ Toàn màn hình</button>
+        <button class="zoom-btn" id="btn-topo-config" title="Mở bảng cấu hình IP & Đấu nối cổng">⚙️ Cấu Hình IP &amp; Sơ Đồ</button>
       </div>
 
       <div class="topo-legend">
@@ -1265,6 +1511,8 @@ function setupSiteFilterButtons() {
         if (document.exitFullscreen) document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       }
+    } else if (ev.target.id === "btn-topo-config") {
+      TopologyRow.openConfigModal();
     }
   };
 }

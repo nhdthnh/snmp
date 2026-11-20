@@ -5,13 +5,14 @@
  */
 import { escapeHtml, fmtMhz, fmtUptime } from "../format.js";
 
-const statItem = (label, value, colorClass = "c-green", infoIcon = false) => `
-  <div class="stat-card">
+const statItem = (label, value, colorClass = "c-green", infoIcon = false, title = "", sub = "") => `
+  <div class="stat-card" ${title ? `title="${escapeHtml(title)}" style="cursor:help;"` : ""}>
     <div class="stat-label">
       ${infoIcon ? '<span class="info-icon" title="Thông tin">ℹ</span>' : ""}
       ${label}
     </div>
     <div class="stat-value ${colorClass}">${escapeHtml(value ?? "–")}</div>
+    ${sub ? `<div class="stat-sub" style="font-size:10px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sub}</div>` : ""}
   </div>
 `;
 
@@ -37,12 +38,12 @@ export const StatsRow = {
           statItem("HQ Uptime", fmtUptime(hq.uptime), "c-green"),
           statItem("HQ Model", hq.model || "RB3011UiAS", "c-green"),
           statItem("HQ Errors", hqErr, hqErr > 0 ? "c-red" : "c-green", true),
-          statItem("HQ DHCP", hq.leases ?? 22, "c-green", true),
+          statItem("HQ DHCP", hq.leases ?? 158, "c-green", true, "Chi tiết IP VLAN HQ:\n• VLAN10-LAN: 90 IP\n• VLAN20-WIFI: 84 IP\n• VLAN30: 0 IP\nTổng ARP: 174 IP", "V10: 90 · V20: 84"),
           statItem("HQ CPU", fmtMhz(hq.cpu_mhz ?? 1400), "c-green"),
           statItem("BOB Uptime", fmtUptime(bob.uptime), "c-green"),
           statItem("BOB Model", bob.model || "hAP ac²", "c-green"),
           statItem("BOB Errors", bobErr, bobErr > 0 ? "c-red" : "c-green", true),
-          statItem("BOB DHCP", bob.leases ?? 18, "c-green", true),
+          statItem("BOB DHCP", bob.leases ?? 33, "c-green", true, "Chi tiết IP BOB:\n• bridge (192.168.4.0/24): 69 IP\n  - 32 Camera Hikvision\n  - 1 NVR01 + 1 Máy chấm công\n  - 33 DHCP leases\nTổng ARP: 69 IP", "LAN: 69 (32 Cam)"),
           statItem("BOB CPU", fmtMhz(bob.cpu_mhz ?? 716), "c-green"),
         ].join("");
       }
@@ -73,7 +74,16 @@ export const StatsRow = {
           statItem("Status", s.status || "Running", "c-green", true),
           statItem("POE Status", s.poe_status || (isBob ? "N/A" : "Waiting"), "c-yellow"),
           statItem("Errors", totalErrors, totalErrors > 0 ? "c-red" : "c-green", true),
-          statItem("DHCP", s.leases ?? (isBob ? 18 : 22), "c-green", true),
+          statItem(
+            "DHCP",
+            s.leases ?? (isBob ? 33 : 158),
+            "c-green",
+            true,
+            isBob
+              ? "Chi tiết IP BOB:\n• bridge (192.168.4.0/24): 69 IP (32 Camera + NVR + Chấm công + 33 DHCP)\nTổng ARP: 69 IP"
+              : "Chi tiết IP VLAN HQ:\n• VLAN10-LAN: 90 IP\n• VLAN20-WIFI: 84 IP\n• VLAN30: 0 IP\nTổng ARP: 174 IP",
+            isBob ? "LAN: 69 (32 Cam)" : "V10: 90 · V20: 84"
+          ),
           statItem("CPU Mhz", fmtMhz(s.cpu_mhz ?? (isBob ? 716 : 1400)), "c-green"),
         ].join("");
       }

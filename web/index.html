@@ -73,9 +73,21 @@
     <button class="nav-tab" data-tab="interfaces">Cổng &amp; Neighbors</button>
     <button class="nav-tab" data-tab="system">Hệ thống &amp; Lỗi</button>
     <button class="nav-tab" data-tab="topology">Sơ đồ mạng (Topology)</button>
+    <button class="nav-tab" data-tab="ai">✨ Phân tích AI</button>
   </nav>
 
   <main>
+    <!-- PHÂN TÍCH LƯU LƯỢNG MẠNG BẰNG AI (Gemma 4 31B / Gemini) -->
+    <section class="dashboard-section" data-tab="ai" id="ai-section">
+      <div class="collapsible-header" data-target="ai-body">
+        <span class="arrow-icon">▼</span>
+        <span>✨ Phân tích Lưu lượng Mạng AI · Gemma 4 31B (Định kỳ 30 phút)</span>
+      </div>
+      <div id="ai-body" class="collapsible-body">
+        <div id="ai-analysis-container"></div>
+      </div>
+    </section>
+
     <!-- 0. CHẾ ĐỘ "CẢ 2 ROUTER": HQ và BOB tách thành 2 khối riêng -->
     <section class="dashboard-section dual-only" data-tab="total">
       <div class="collapsible-header" data-target="dual-body">
@@ -359,6 +371,77 @@
       </div>
     </section>
   </main>
+
+  <!-- MODAL CẤU HÌNH THIẾT BỊ, ĐỊA CHỈ IP & CỔNG ĐẤU NỐI SƠ ĐỒ -->
+  <div id="topo-config-modal" class="topo-modal-backdrop" style="display:none;">
+    <div class="topo-modal-dialog">
+      <div class="topo-modal-header">
+        <div class="topo-modal-title">
+          <span style="font-size:18px;">⚙️</span>
+          <span>Bảng Cấu Hình Thiết Bị, Địa Chỉ IP &amp; Cổng Đấu Nối Sơ Đồ</span>
+        </div>
+        <button id="topo-modal-close-btn" class="topo-modal-close" title="Đóng">✕</button>
+      </div>
+
+      <div class="topo-modal-tabs">
+        <button class="topo-m-tab active" data-tab="tab-devices-ip">📋 Bảng IP &amp; Thiết Bị (2 Cơ Sở)</button>
+        <button class="topo-m-tab" data-tab="tab-links-ports">🔗 Bảng Cáp Đấu Nối Các Cổng</button>
+      </div>
+
+      <div class="topo-modal-body">
+        <!-- TAB 1: Bảng Danh Sách Thiết Bị & IP -->
+        <div id="tab-devices-ip" class="topo-tab-pane active">
+          <div class="table-search-row">
+            <input type="text" id="cfg-device-search" placeholder="🔍 Tìm kiếm theo tên hoặc IP..." class="form-input" style="max-width:280px;">
+            <span class="muted" style="font-size:12px;">Sửa trực tiếp tên, IP hoặc cổng trên bảng rồi bấm Lưu.</span>
+          </div>
+          <div class="table-responsive-box">
+            <table class="topo-table" id="cfg-devices-table">
+              <thead>
+                <tr>
+                  <th style="width:110px;">Mã (ID)</th>
+                  <th>Tên thiết bị</th>
+                  <th style="width:140px;">Địa chỉ IP</th>
+                  <th style="width:80px;">Cơ sở</th>
+                  <th style="width:110px;">Loại</th>
+                  <th>Cổng cắm / Vị trí</th>
+                </tr>
+              </thead>
+              <tbody id="cfg-devices-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: Bảng Cáp Đấu Nối Cổng -->
+        <div id="tab-links-ports" class="topo-tab-pane" style="display:none;">
+          <div class="table-search-row">
+            <input type="text" id="cfg-link-search" placeholder="🔍 Tìm kiếm liên kết (tên thiết bị, cổng)..." class="form-input" style="max-width:280px;">
+            <span class="muted" style="font-size:12px;">Chỉnh sửa cổng nguồn (ví dụ: ether3, ether5), cổng đích hoặc mô tả rồi bấm Lưu.</span>
+          </div>
+          <div class="table-responsive-box">
+            <table class="topo-table" id="cfg-links-table">
+              <thead>
+                <tr>
+                  <th style="width:120px;">Từ Thiết Bị</th>
+                  <th style="width:110px;">Cổng nguồn</th>
+                  <th style="width:120px;">Đến Thiết Bị</th>
+                  <th style="width:110px;">Cổng đích</th>
+                  <th style="width:130px;">Interface SNMP</th>
+                  <th>Mô tả liên kết</th>
+                </tr>
+              </thead>
+              <tbody id="cfg-links-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="topo-modal-footer">
+        <button id="topo-modal-cancel-btn" class="topo-btn-cancel">Đóng</button>
+        <button id="topo-modal-save-btn" class="topo-btn-save">💾 Lưu Cấu Hình &amp; Cập Nhật Sơ Đồ Ngay</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

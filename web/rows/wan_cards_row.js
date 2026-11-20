@@ -15,7 +15,7 @@ const HQ_CARDS_CONFIG = [
   { name: "FPT HQ (WAN 1)", iface: "ether1", type: "wan", rtr: "hq", desc: "DHCP IP WAN (RB3011)" },
   { name: "VNPT HQ (WAN 2)", iface: "ether2", type: "wan", rtr: "hq", desc: "113.161.75.195 (RB3011)" },
   { name: "IPsec Site-to-Site", iface: "ipsec", type: "vpn", rtr: "hq", desc: "HQ ⟷ Chi nhánh BOB (hAP ac²)" },
-  { name: "Nối SW Core Ruijie", iface: "ether5", type: "core", rtr: "hq", desc: "ether5 · Cổng P.2 nối Ruijie ES224GC" },
+  { name: "Nối SW Core Ruijie", iface: "ether3", type: "core", rtr: "hq", desc: "ether3 · Cổng P.2 nối Ruijie ES224GC" },
   { name: "DVR Camera", iface: "ether4", type: "cam", rtr: "hq", desc: "Đầu ghi Camera Vantech (1.101)" },
   { name: "SW WiFi 296", iface: "ether9", type: "wifi", rtr: "hq", desc: "AP VLAN 20: 192.168.0.x" },
   { name: "Core Trunk", iface: "BridgeVLAN", type: "core", rtr: "hq", desc: "Trunk nối SW Core Ruijie" },

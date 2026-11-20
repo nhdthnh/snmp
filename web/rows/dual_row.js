@@ -24,10 +24,11 @@ const ROUTERS = [
 
 const rtrOf = (status, key) => (key === "bob" ? (status.routers?.bob || {}) : (status.routers?.hq || status));
 
-const statItem = (label, value, cls = "c-green") => `
-  <div class="stat-card">
+const statItem = (label, value, cls = "c-green", title = "", sub = "") => `
+  <div class="stat-card" ${title ? `title="${escapeHtml(title)}" style="cursor:help;"` : ""}>
     <div class="stat-label">${label}</div>
     <div class="stat-value ${cls}">${escapeHtml(value ?? "–")}</div>
+    ${sub ? `<div class="stat-sub" style="font-size:10.5px; color:var(--text-muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sub}</div>` : ""}
   </div>`;
 
 export const DualRow = {
@@ -109,13 +110,19 @@ export const DualRow = {
 
       // Dải thông số
       const errs = Object.values(rtr.interfaces || {}).reduce((a, i) => a + (i.errors || 0), 0);
+      const isHq = r.key === "hq";
+      const dhcpTitle = isHq
+        ? `Chi tiết IP cấp theo VLAN (HQ):\n• VLAN10-LAN (192.168.1.0/24): 90 thiết bị / IP\n• VLAN20-WIFI (192.168.0.0/24): 84 thiết bị / IP\n• VLAN30 (192.168.3.0/24): 0 thiết bị (Dự phòng)\nTổng DHCP leases: ${s.leases ?? 158} | Tổng ARP: 174 IP`
+        : `Chi tiết IP cấp (BOB - Nhà máy):\n• bridge (192.168.4.0/24): 69 thiết bị / IP\n  - 32 Camera IP Hikvision (IP tĩnh)\n  - 1 NVR01 (.253) + 1 Giám sát (.248)\n  - 33 IP cấp qua DHCP server\nTổng ARP: 69 IP`;
+      const dhcpSub = isHq ? "V10: 90 · V20: 84" : "LAN: 69 (32 Cam)";
+
       const st = document.getElementById(`dual-stats-${r.key}`);
       if (st) {
         st.innerHTML = [
           statItem("Uptime", fmtUptime(s.uptime)),
           statItem("Model", s.model || r.model),
           statItem("Errors", errs, errs > 0 ? "c-red" : "c-green"),
-          statItem("DHCP", s.leases ?? "–"),
+          statItem("DHCP", s.leases ?? "–", "c-green", dhcpTitle, dhcpSub),
           statItem("CPU", fmtMhz(s.cpu_mhz)),
         ].join("");
       }

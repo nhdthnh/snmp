@@ -55,6 +55,54 @@ export async function logoutUser() {
   window.location.href = "/login.html";
 }
 
+/** Lấy kết quả phân tích mạng AI định kỳ (30 phút / lần). */
+export async function fetchAiAnalysis() {
+  const res = await getJSON("/api/ai-analysis");
+  return res.data || {};
+}
+
+/** Yêu cầu kích hoạt phân tích mạng AI ngay lập tức. */
+export async function triggerAiAnalyzeNow() {
+  const headers = { "Content-Type": "application/json" };
+  try {
+    const token = localStorage.getItem("netmon_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch (e) {}
+  const res = await fetch("/api/ai-analyze-now", { method: "POST", headers });
+  if (res.status === 401) {
+    try { localStorage.removeItem("netmon_token"); } catch (e) {}
+    window.location.href = "/login.html";
+    throw new Error("Phiên làm việc hết hạn.");
+  }
+  return res.json();
+}
+
+/** Lấy cấu hình thiết bị & sơ đồ mạng từ backend. */
+export async function fetchTopologyConfig() {
+  const res = await getJSON("/api/topology-config");
+  return res.config || null;
+}
+
+/** Lưu cấu hình thiết bị & sơ đồ mạng lên backend. */
+export async function saveTopologyConfig(configData) {
+  const headers = { "Content-Type": "application/json" };
+  try {
+    const token = localStorage.getItem("netmon_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch (e) {}
+  const res = await fetch("/api/topology-config", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(configData),
+  });
+  if (res.status === 401) {
+    try { localStorage.removeItem("netmon_token"); } catch (e) {}
+    window.location.href = "/login.html";
+    throw new Error("Phiên làm việc hết hạn.");
+  }
+  return res.json();
+}
+
 /**
  * Tách một cột dữ liệu (col 1 = rx, col 2 = tx) từ series traffic thành [[t, val], ...].
  */

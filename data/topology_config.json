@@ -1,0 +1,409 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-11-20T09:10:45.572Z",
+  "hq_uplink": {
+    "from": "mikrotik",
+    "to": "core",
+    "router_port": "ether3",
+    "switch_port": "p2",
+    "mode": "LAN (Access / Không Trunk)",
+    "ifName": "ether3"
+  },
+  "devices": [
+    {
+      "id": "mikrotik",
+      "name": "Mikrotik RB3011UiAS",
+      "ip": "192.168.1.1",
+      "site": "hq",
+      "type": "router",
+      "port": "Router Tổng HQ",
+      "ping": true
+    },
+    {
+      "id": "core",
+      "name": "SW CORE Ruijie RG-ES224GC",
+      "ip": "192.168.1.254",
+      "site": "hq",
+      "type": "core",
+      "port": "Nối MikroTik ether3 (p2)",
+      "ping": true
+    },
+    {
+      "id": "dvr_vt",
+      "name": "DVR Vantech",
+      "ip": "192.168.1.101",
+      "site": "hq",
+      "type": "nvr",
+      "port": "Nối MikroTik eth4",
+      "ping": true
+    },
+    {
+      "id": "dvr_dh",
+      "name": "DVR Dahua",
+      "ip": "192.168.1.226",
+      "site": "hq",
+      "type": "nvr",
+      "port": "Nối Ruijie Port 17",
+      "ping": true
+    },
+    {
+      "id": "sql",
+      "name": "Server SQL Database",
+      "ip": "192.168.1.57",
+      "site": "hq",
+      "type": "server",
+      "port": "Nối Ruijie P.15",
+      "ping": true
+    },
+    {
+      "id": "nas",
+      "name": "NAS Synology DS923+",
+      "ip": "192.168.1.119",
+      "site": "hq",
+      "type": "nas",
+      "port": "Nối Ruijie P.23-24 (BOND)",
+      "ping": true
+    },
+    {
+      "id": "wifi",
+      "name": "SW WiFi 296",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối MikroTik eth9 (VLAN 20)",
+      "ping": false
+    },
+    {
+      "id": "poe",
+      "name": "SW POE HIKVISION 16P",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.16 (16 Cam PoE)",
+      "ping": false
+    },
+    {
+      "id": "u1",
+      "name": "TL-SG1024D Tầng 1",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.22",
+      "ping": false
+    },
+    {
+      "id": "u2",
+      "name": "TL-SG1024D_1 Tầng 2",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.21",
+      "ping": false
+    },
+    {
+      "id": "u3",
+      "name": "TL-SG1016D Tầng 3",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.20",
+      "ping": false
+    },
+    {
+      "id": "u4",
+      "name": "TL-SG1016D_1 Tầng 4",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.19",
+      "ping": false
+    },
+    {
+      "id": "u5",
+      "name": "TL-SG1005D Studio (5P)",
+      "ip": "Unmanaged",
+      "site": "hq",
+      "type": "switch",
+      "port": "Nối Ruijie P.18",
+      "ping": false
+    },
+    {
+      "id": "prn1",
+      "name": "Máy in MP C4505EX",
+      "ip": "192.168.1.250",
+      "site": "hq",
+      "type": "printer",
+      "port": "Ping Online (Không cắm switch)",
+      "ping": true
+    },
+    {
+      "id": "prn2",
+      "name": "Máy in MP C5503",
+      "ip": "192.168.1.252",
+      "site": "hq",
+      "type": "printer",
+      "port": "Ping Online (Không cắm switch)",
+      "ping": true
+    },
+    {
+      "id": "ap",
+      "name": "AP WIFI UniFi AP01-05",
+      "ip": "192.168.0.252",
+      "site": "hq",
+      "type": "ap",
+      "port": "Nối SW WiFi 296",
+      "ping": true
+    },
+    {
+      "id": "bob_router",
+      "name": "MikroTik hAP ac² (BOB)",
+      "ip": "192.168.4.1",
+      "site": "bob",
+      "type": "router",
+      "port": "Router Tổng Nhà Máy",
+      "ping": true
+    },
+    {
+      "id": "bob_sw03",
+      "name": "Sw03 Ruijie RG-ES210GS-P",
+      "ip": "192.168.4.252",
+      "site": "bob",
+      "type": "switch",
+      "port": "Nối Sw01 P.15",
+      "ping": true
+    },
+    {
+      "id": "bob_sw02",
+      "name": "Sw02 Hikvision PoE DS-3E1318P",
+      "ip": "192.168.4.242",
+      "site": "bob",
+      "type": "switch",
+      "port": "Nối Sw01 G1",
+      "ping": true
+    },
+    {
+      "id": "bob_sw04",
+      "name": "Sw04 Hikvision PoE DS-3E1318P",
+      "ip": "192.168.4.243",
+      "site": "bob",
+      "type": "switch",
+      "port": "Nối Sw02 G2-G1",
+      "ping": true
+    },
+    {
+      "id": "bob_sw05",
+      "name": "Sw05 Switch OEM 8P",
+      "ip": "Unmanaged",
+      "site": "bob",
+      "type": "switch",
+      "port": "Nối Sw04 G2-G1",
+      "ping": false
+    },
+    {
+      "id": "bob_nvr",
+      "name": "NVR01 Hikvision",
+      "ip": "192.168.4.253",
+      "site": "bob",
+      "type": "nvr",
+      "port": "Nối Sw01 P.16",
+      "ping": true
+    },
+    {
+      "id": "bob_photo",
+      "name": "Photocopy01",
+      "ip": "192.168.4.249",
+      "site": "bob",
+      "type": "printer",
+      "port": "Ping Online Nhà máy",
+      "ping": true
+    },
+    {
+      "id": "bob_mcc",
+      "name": "Máy giám sát ra vào Hikvision",
+      "ip": "192.168.4.248",
+      "site": "bob",
+      "type": "access",
+      "port": "Kết nối Wi-Fi (Không cắm switch)",
+      "ping": true
+    },
+    {
+      "id": "bob_ap",
+      "name": "AP01-AP05 (Reyee Wi-Fi 6)",
+      "ip": "192.168.4.94",
+      "site": "bob",
+      "type": "ap",
+      "port": "Nối Sw03 Ruijie",
+      "ping": true
+    },
+    {
+      "id": "bob_prn_brother",
+      "name": "Máy in A4 Brother",
+      "ip": "192.168.4.92",
+      "site": "bob",
+      "type": "printer",
+      "port": "Kết nối Wi-Fi (Ping test)",
+      "ping": true
+    },
+    {
+      "id": "bob_prn_xprinter",
+      "name": "Máy in tem nhãn Xprinter",
+      "ip": "192.168.4.95",
+      "site": "bob",
+      "type": "printer",
+      "port": "Kết nối Wi-Fi (Ping test)",
+      "ping": true
+    }
+  ],
+  "links": [
+    {
+      "from": "mikrotik",
+      "to": "fpt",
+      "pFrom": "eth1",
+      "pTo": "WAN1",
+      "desc": "WAN 1 FPT"
+    },
+    {
+      "from": "mikrotik",
+      "to": "vnpt",
+      "pFrom": "eth2",
+      "pTo": "WAN2",
+      "desc": "WAN 2 VNPT"
+    },
+    {
+      "from": "mikrotik",
+      "to": "core",
+      "pFrom": "ether3",
+      "pTo": "p2",
+      "ifName": "ether3",
+      "desc": "Uplink SW CORE Ruijie "
+    },
+    {
+      "from": "mikrotik",
+      "to": "dvr_vt",
+      "pFrom": "eth4",
+      "pTo": "LAN",
+      "desc": "DVR Vantech (1.101)"
+    },
+    {
+      "from": "mikrotik",
+      "to": "wifi",
+      "pFrom": "ether9",
+      "pTo": "Uplink",
+      "ifName": "ether9",
+      "desc": "SW WiFi 296 (VLAN 20)"
+    },
+    {
+      "from": "wifi",
+      "to": "ap",
+      "pFrom": "VLAN20",
+      "pTo": "LAN",
+      "desc": "AP UniFi AP01-05"
+    },
+    {
+      "from": "core",
+      "to": "dvr_dh",
+      "pFrom": "p17",
+      "pTo": "LAN",
+      "desc": "DVR Dahua (1.226)"
+    },
+    {
+      "from": "core",
+      "to": "sql",
+      "pFrom": "p15",
+      "pTo": "LAN",
+      "desc": "Server SQL (1.57)"
+    },
+    {
+      "from": "core",
+      "to": "poe",
+      "pFrom": "p16",
+      "pTo": "G1",
+      "desc": "SW POE Hikvision 16P"
+    },
+    {
+      "from": "core",
+      "to": "nas",
+      "pFrom": "p23-24",
+      "pTo": "BOND",
+      "desc": "NAS DS923+ Bond"
+    },
+    {
+      "from": "core",
+      "to": "u1",
+      "pFrom": "p22",
+      "pTo": "Uplink",
+      "desc": "TL-SG1024D T1"
+    },
+    {
+      "from": "core",
+      "to": "u2",
+      "pFrom": "p21",
+      "pTo": "Uplink",
+      "desc": "TL-SG1024D_1 T2"
+    },
+    {
+      "from": "core",
+      "to": "u3",
+      "pFrom": "p20",
+      "pTo": "Uplink",
+      "desc": "TL-SG1016D T3"
+    },
+    {
+      "from": "core",
+      "to": "u4",
+      "pFrom": "p19",
+      "pTo": "Uplink",
+      "desc": "TL-SG1016D_1 T4"
+    },
+    {
+      "from": "core",
+      "to": "u5",
+      "pFrom": "p18",
+      "pTo": "p1",
+      "desc": "TL-SG1005D Studio"
+    },
+    {
+      "from": "bob_router",
+      "to": "bob_sw01",
+      "pFrom": "ether2",
+      "pTo": "P.1",
+      "ifName": "ether2",
+      "desc": "Nối Sw01 TL-SG116"
+    },
+    {
+      "from": "bob_sw01",
+      "to": "bob_sw03",
+      "pFrom": "P.15",
+      "pTo": "G1",
+      "desc": "Sw03 Ruijie PoE"
+    },
+    {
+      "from": "bob_sw01",
+      "to": "bob_sw02",
+      "pFrom": "G1",
+      "pTo": "G1",
+      "desc": "Sw02 Hikvision PoE"
+    },
+    {
+      "from": "bob_sw01",
+      "to": "bob_nvr",
+      "pFrom": "P.16",
+      "pTo": "LAN",
+      "desc": "NVR01 Hikvision"
+    },
+    {
+      "from": "bob_sw02",
+      "to": "bob_sw04",
+      "pFrom": "G2",
+      "pTo": "G1",
+      "desc": "Sw02 ⟷ Sw04"
+    },
+    {
+      "from": "bob_sw04",
+      "to": "bob_sw05",
+      "pFrom": "G2",
+      "pTo": "G1",
+      "desc": "Sw04 ⟷ Sw05"
+    }
+  ]
+}

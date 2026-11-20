@@ -14,6 +14,28 @@ HTTP_PORT = int(os.environ.get("NETMON_PORT", 8088))
 POLL_INTERVAL = int(os.environ.get("NETMON_INTERVAL", 30))  # giây giữa 2 lần lấy mẫu
 RETENTION_DAYS = int(os.environ.get("NETMON_RETENTION", 7))  # số ngày giữ lịch sử
 
+# ==============================================================================
+# CẤU HÌNH AI PHÂN TÍCH LƯU LƯỢNG MẠNG (GEMINI / GEMMA)
+# ==============================================================================
+AI_RAW_KEYS = os.environ.get("GEMINI_API_KEYS", "")
+if not AI_RAW_KEYS:
+    try:
+        from . import config_local
+        AI_RAW_KEYS = getattr(config_local, "GEMINI_API_KEYS", "")
+    except ImportError:
+        try:
+            import config_local
+            AI_RAW_KEYS = getattr(config_local, "GEMINI_API_KEYS", "")
+        except ImportError:
+            pass
+
+GEMINI_API_KEYS = [k.strip() for k in AI_RAW_KEYS.split(",") if k.strip()]
+AI_PRIMARY_MODEL = os.environ.get("NETMON_AI_MODEL", "gemma-4-31b-it")
+AI_FALLBACK_MODELS = ["gemma-4-26b-a4b-it", "gemini-2.5-flash", "gemini-flash-latest"]
+AI_ANALYSIS_INTERVAL = int(os.environ.get("NETMON_AI_INTERVAL", 1800))  # 30 phút (1800 giây)
+AI_ANALYSIS_FILE = DATA_DIR / "ai_analysis.json"
+
+
 # Router MikroTik HQ (Trụ sở chính)
 ROUTER_IP = os.environ.get("NETMON_ROUTER_IP", "192.168.1.1")
 # Router MikroTik BOB (Chi nhánh / Nhà máy - kết nối qua IPsec)

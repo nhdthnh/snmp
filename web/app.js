@@ -2,7 +2,7 @@
  * Main Application Orchestrator (app.js).
  * Nhập các module hàng (rows), điều phối chu kỳ tải dữ liệu, chuyển tab, và phản hồi tương tác người dùng.
  */
-import { fetchStatus, logoutUser } from "./api.js";
+import { fetchStatus, fetchAiAnalysis, logoutUser } from "./api.js";
 import { fmtTime } from "./format.js";
 
 // Nhập các thành phần hàng độc lập
@@ -17,6 +17,7 @@ import { SnmpRow } from "./rows/snmp_row.js";
 import { TopologyRow } from "./rows/topology_row.js";
 import { WanCardsRow } from "./rows/wan_cards_row.js";
 import { DualRow } from "./rows/dual_row.js";
+import { AiAnalysisRow } from "./rows/ai_analysis_row.js";
 import { prefs, applyTheme, currentTheme, toggleTheme } from "./theme.js";
 
 class NetMonApp {
@@ -57,6 +58,7 @@ class NetMonApp {
     this.bindEvents();
     this.applyRouterView();
     InterfacesTableRow.initControls();
+    AiAnalysisRow.init();
     await this.refresh(true);
     this.resetTimer();
   }
@@ -240,6 +242,14 @@ class NetMonApp {
       this.renderStatus(this.status);
       await this.loadHistory();
       this.updateHeaderTime(this.status.ts);
+
+      // Cập nhật phân tích mạng AI (30 phút / lần)
+      try {
+        const aiData = await fetchAiAnalysis();
+        AiAnalysisRow.render(aiData);
+      } catch (aiErr) {
+        console.warn("[NetMon] Không thể tải phân tích AI:", aiErr);
+      }
     } catch (err) {
       console.warn("[NetMon] Không thể tải trạng thái:", err);
       const pill = document.getElementById("connection-status-pill");
