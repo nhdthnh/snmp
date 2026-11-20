@@ -1,48 +1,18 @@
-"""Xác thực người dùng và quản lý phiên đăng nhập (Session Management) cho NetMon."""
-import json
-import os
+"""Xác thực người dùng và quản lý phiên đăng nhập (Session Management) cho NetMon.
+
+Lưu ý: Các phiên làm việc (sessions) được lưu trong bộ nhớ RAM (In-Memory),
+hoàn toàn KHÔNG ghi ra file đĩa (không tạo file sessions.json) nhằm bảo mật,
+tránh xung đột mã nguồn Git giữa các môi trường triển khai.
+"""
 import secrets
 import time
-from pathlib import Path
-
-from . import config
 
 VALID_USERNAME = "system"
 VALID_PASSWORD = "@cronis1"
 SESSION_DURATION_SECONDS = 30 * 24 * 3600  # 30 ngày
 
-SESSIONS_FILE = config.DATA_DIR / "sessions.json"
-
+# Lưu trữ phiên đăng nhập hoàn toàn trong bộ nhớ (In-Memory)
 _SESSIONS = {}
-
-
-def _load_sessions():
-    global _SESSIONS
-    if SESSIONS_FILE.is_file():
-        try:
-            with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                now = time.time()
-                # Chỉ nạp các phiên chưa hết hạn
-                _SESSIONS = {
-                    tok: sess for tok, sess in data.items()
-                    if sess.get("expires_at", 0) > now
-                }
-        except Exception:
-            _SESSIONS = {}
-
-
-def _save_sessions():
-    try:
-        config.DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
-            json.dump(_SESSIONS, f, indent=2)
-    except Exception:
-        pass
-
-
-# Khởi động nạp session từ đĩa
-_load_sessions()
 
 
 def authenticate(username, password):
@@ -55,7 +25,6 @@ def authenticate(username, password):
             "created_at": now,
             "expires_at": now + SESSION_DURATION_SECONDS,
         }
-        _save_sessions()
         return token
     return None
 
@@ -67,7 +36,6 @@ def validate_token(token):
     sess = _SESSIONS[token]
     if time.time() > sess.get("expires_at", 0):
         del _SESSIONS[token]
-        _save_sessions()
         return False
     return True
 
@@ -76,7 +44,6 @@ def logout(token):
     """Xóa phiên đăng nhập."""
     if token and token in _SESSIONS:
         del _SESSIONS[token]
-        _save_sessions()
 
 
 def get_token_from_headers(headers):

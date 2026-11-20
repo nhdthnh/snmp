@@ -1,17 +1,27 @@
-# ── Database SQLite (dữ liệu lưu lượng, không đưa lên git) ──
+# ── Database SQLite (dữ liệu lưu lượng, tuyệt đối không đưa lên git) ──
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.db-journal
-data/sessions.json
-data/ai_analysis.json
-scratch/
+data/traffic.db
 *.sqlite
 *.sqlite3
 
+# ── Dữ liệu phiên & phân tích tạm thời ──
+sessions.json
+data/sessions.json
+data/ai_analysis.json
+scratch/
+
 # ── Python ──
 __pycache__/
+*/__pycache__/
 *.py[cod]
+*$py.class
 .venv/
 venv/
 
@@ -23,5 +33,8 @@ Thumbs.db
 
 # ── File cấu hình chứa mật khẩu/SNMP community/API Keys (không đưa lên git) ──
 .env
+.env.*
+.env.local
+!.env.example
 *config_local.py
 *config.local.py
