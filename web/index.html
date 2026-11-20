@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>General / Mikrotik · NetMon SNMP</title>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("netmon-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -22,7 +24,7 @@
     <div class="header-controls">
       <!-- Chọn Router MikroTik xem SNMP (Mặc định: Tất cả 2 Router HQ + BOB) -->
       <select id="router-select" class="control-select router-select" title="Chọn Router MikroTik xem chỉ số SNMP">
-        <option value="all" selected>🌐 Cả 2 Router: HQ (RB3011) + BOB (hAP ac²)</option>
+        <option value="all">🔀 Cả 2 Router: HQ + BOB (tách riêng)</option>
         <option value="hq">🏢 HQ: RB3011UiAS (192.168.1.1)</option>
         <option value="bob">🏭 BOB: hAP ac² (192.168.4.1)</option>
       </select>
@@ -46,6 +48,9 @@
         <option value="300000">5m</option>
         <option value="0">Tắt</option>
       </select>
+
+      <!-- Đổi giao diện sáng / tối -->
+      <button id="theme-toggle-btn" class="icon-btn theme-btn" title="Đổi sáng / tối">☀️</button>
 
       <!-- Nút làm mới thủ công -->
       <button id="manual-refresh-btn" class="icon-btn" title="Làm mới ngay">
@@ -71,8 +76,20 @@
   </nav>
 
   <main>
+    <!-- 0. CHẾ ĐỘ "CẢ 2 ROUTER": HQ và BOB tách thành 2 khối riêng -->
+    <section class="dashboard-section dual-only" data-tab="total">
+      <div class="collapsible-header" data-target="dual-body">
+        <span class="arrow-icon">▼</span>
+        <span>HQ &amp; BOB · Tổng quan 2 Router</span>
+      </div>
+      <div id="dual-body" class="collapsible-body">
+        <div id="dual-grid" class="dual-grid"></div>
+        <div class="both-note">ℹ Khối trên tách riêng HQ và BOB. Các mục bên dưới (Traffic, Interfaces, SNMP…) hiển thị gộp cả 2 router; chọn HQ hoặc BOB ở menu góc phải trên để xem riêng.</div>
+      </div>
+    </section>
+
     <!-- 1. HÀNG TOTAL: 4 Gauges + System Graph [Image 1] -->
-    <section class="dashboard-section" data-tab="total">
+    <section class="dashboard-section single-only" data-tab="total">
       <div class="collapsible-header" data-target="total-body">
         <span class="arrow-icon">▼</span>
         <span>Total</span>
@@ -101,12 +118,12 @@
     </section>
 
     <!-- 2. HÀNG STATS 1: Thông số RouterOS cơ bản [Image 1] -->
-    <section class="dashboard-section" data-tab="total">
+    <section class="dashboard-section single-only" data-tab="total">
       <div id="stats-row-1" class="stats-bar-grid"></div>
     </section>
 
     <!-- HÀNG ĐƯỜNG TRUYỀN & LƯU LƯỢNG WAN [Khớp Hình 2] -->
-    <section class="dashboard-section" data-tab="overview">
+    <section class="dashboard-section single-only" data-tab="overview">
       <div class="collapsible-header" data-target="wan-section-body">
         <span class="arrow-icon">▼</span>
         <span>Lưu lượng &amp; Đường truyền Internet</span>

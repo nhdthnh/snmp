@@ -76,7 +76,7 @@ export function gauge({
       <div class="gauge-svg-wrap">
         <svg viewBox="0 0 220 135" class="gauge-svg">
           <!-- Track nền -->
-          <path d="${trackPath}" fill="none" stroke="${GAUGE_COLORS.track}" stroke-width="16" stroke-linecap="round"/>
+          <path d="${trackPath}" fill="none" style="stroke:var(--gauge-track)" stroke-width="16" stroke-linecap="round"/>
           
           <!-- Vạch các đoạn màu mờ ở viền ngoài -->
           <path d="${arcPath(START_DEG, SWEEP_DEG * 0.6)}" fill="none" stroke="${GAUGE_COLORS.green}" stroke-width="2" opacity="0.35"/>

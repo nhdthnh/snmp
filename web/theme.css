@@ -1,0 +1,186 @@
+/**
+ * NetMon - Theme & Layout overrides (theme.css)
+ * Nạp SAU style.css. Gồm: 1) full-width  2) sáng/tối  3) tách khối HQ / BOB.
+ */
+
+/* ───────────── 1. FULL WIDTH: bỏ 2 dải trống hai bên ───────────── */
+main {
+  max-width: none !important;
+  width: 100%;
+  margin: 0 !important;
+  padding: 16px 24px 40px;
+}
+.gauge-svg-wrap { max-width: 220px; }
+
+/* ───────────── 2. BIẾN MÀU SÁNG / TỐI ───────────── */
+:root {
+  --ctl-bg: #22252b;
+  --ctl-hover: #2c3038;
+  --nav-bg: #14161a;
+  --th-bg: #1f2329;
+  --th-hover: #2a2e36;
+  --soft-line: rgba(255, 255, 255, 0.05);
+  --soft-fill: rgba(0, 0, 0, 0.25);
+  --gauge-track: #22252b;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-text: #8b949e;
+  --tip-bg: rgba(24, 27, 31, 0.95);
+  --pill-bg: #1c2027;
+  --pill-hover: #252b35;
+  --hq-color: #38bdf8;   /* HQ  = xanh da trời */
+  --bob-color: #f59e0b;  /* BOB = hổ phách     */
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg-app: #eef0f4;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f5f8;
+  --bg-header: #ffffff;
+  --border-color: rgba(15, 23, 42, 0.12);
+  --border-light: rgba(15, 23, 42, 0.2);
+  --text-main: #2b3544;
+  --text-muted: #667085;
+  --text-bright: #0f172a;
+  --c-green: #1f9d55;
+  --c-yellow: #b7791f;
+  --c-blue: #2563eb;
+  --c-orange: #d97706;
+  --c-red: #d92d46;
+  --c-purple: #7c3aed;
+  --badge-up-bg: rgba(31, 157, 85, 0.12);
+  --badge-up-text: #1f9d55;
+  --badge-down-bg: rgba(217, 45, 70, 0.12);
+  --badge-down-text: #d92d46;
+
+  --ctl-bg: #f1f3f7;
+  --ctl-hover: #e3e7ee;
+  --nav-bg: #ffffff;
+  --th-bg: #f1f3f7;
+  --th-hover: #e3e7ee;
+  --soft-line: rgba(15, 23, 42, 0.08);
+  --soft-fill: rgba(15, 23, 42, 0.04);
+  --gauge-track: #e3e7ee;
+  --chart-grid: rgba(15, 23, 42, 0.1);
+  --chart-text: #667085;
+  --tip-bg: rgba(255, 255, 255, 0.97);
+  --pill-bg: #f1f3f7;
+  --pill-hover: #e3e7ee;
+  --hq-color: #0284c7;
+  --bob-color: #d97706;
+  color-scheme: light;
+}
+
+body { transition: background 0.2s ease, color 0.2s ease; }
+
+.control-select, .icon-btn, .chip-btn, .wan-icon-box { background: var(--ctl-bg); }
+.icon-btn:hover, .chip-btn:hover { background: var(--ctl-hover); }
+.nav-tabs-bar { background: var(--nav-bg); }
+th { background: var(--th-bg); }
+th.sortable:hover { background: var(--th-hover); }
+.legend-row { border-bottom-color: var(--soft-line); }
+.wan-rates-grid { background: var(--soft-fill); border-color: var(--soft-line); }
+.wan-card-footer { border-top-color: var(--soft-line); }
+.topo-controls-wrap { background: var(--soft-fill); }
+.pill-btn { background: var(--pill-bg); }
+.pill-btn:hover { background: var(--pill-hover); color: var(--text-bright); }
+.zoom-btn { background: var(--pill-bg); color: var(--text-main); border-color: var(--border-light); }
+.zoom-btn:hover { background: var(--pill-hover); color: var(--text-bright); }
+.chart-tooltip { background: var(--tip-bg); }
+.theme-btn { font-size: 14px; line-height: 1; min-width: 34px; }
+
+/* ───────────── 3. TÁCH RÕ HQ / BOB ───────────── */
+body:not(.view-both) .dual-only { display: none !important; }
+body.view-both .single-only { display: none !important; }
+
+.dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1200px) {
+  .dual-grid { grid-template-columns: 1fr; }
+}
+
+.router-group {
+  --rg-color: var(--hq-color);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--rg-color) 45%, transparent);
+  border-top: 4px solid var(--rg-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--rg-color) 5%, var(--bg-app));
+}
+.router-group.router-hq  { --rg-color: var(--hq-color); }
+.router-group.router-bob { --rg-color: var(--bob-color); }
+
+.router-group-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rg-badge {
+  background: var(--rg-color);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  padding: 3px 12px;
+  border-radius: 4px;
+}
+.rg-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.rg-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rg-color);
+  margin-top: 2px;
+}
+.router-group .card { border-color: color-mix(in srgb, var(--rg-color) 25%, var(--border-color)); }
+
+.dual-gauges {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 700px) {
+  .dual-gauges { grid-template-columns: repeat(2, 1fr); }
+}
+
+.both-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ───────────── 4. TOPOLOGY Ở CHẾ ĐỘ SÁNG ───────────── */
+/* Nền trắng + lưới mờ */
+:root[data-theme="light"] .topo-wrap {
+  background: #f8fafc !important;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px) !important;
+  background-size: 36px 36px, 36px 36px !important;
+  border-color: var(--border-light) !important;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+:root[data-theme="light"] .topo-wrap::-webkit-scrollbar-track { background: #e2e8f0; }
+:root[data-theme="light"] .topo-wrap::-webkit-scrollbar-thumb { background: #94a3b8; border-color: #e2e8f0; }
+:root[data-theme="light"] .topo-wrap::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* Toàn bộ thẻ thiết bị / chữ / dây cáp đảo sáng-tối nhưng giữ nguyên màu (xanh/đỏ/tím) nhờ hue-rotate */
+:root[data-theme="light"] .topo-svg {
+  filter: invert(1) hue-rotate(180deg) contrast(1.25) saturate(1.2);
+}
+
+/* Dây cáp đậm hơn để thấy rõ trên nền trắng khi sơ đồ bị thu nhỏ */
+:root[data-theme="light"] .topo-wire { stroke-width: 3; }
+:root[data-theme="light"] .topo-wire-wan { stroke-width: 3.8; }

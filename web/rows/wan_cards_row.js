@@ -71,8 +71,8 @@ export const WanCardsRow = {
     if (totalRxEl) totalRxEl.textContent = fmtBps(sumRx);
     if (totalTxEl) totalTxEl.textContent = fmtBps(sumTx);
 
-    // 2. Render danh sách các thẻ Card Metric
-    const cardsContainer = document.getElementById("wan-cards-grid");
+    // 2. Render danh sách các thẻ Card Metric (this.target: DualRow trỏ vào grid riêng của từng router)
+    const cardsContainer = document.getElementById(this.target || "wan-cards-grid");
     if (!cardsContainer) return;
 
     let cardsConfig = [];

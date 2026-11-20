@@ -20,8 +20,21 @@ export const PALETTE = [
   "#ffb74d", // Cam nhạt
 ];
 
-const GRID_COLOR = "rgba(255, 255, 255, 0.08)";
-const TEXT_COLOR = "#8b949e";
+const cssVar = (name, fallback) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
+// Màu series quá nhạt trên nền trắng -> đổi sang tông đậm hơn khi ở chế độ sáng
+const LIGHT_MAP = {
+  "#fade2a": "#c99a06",
+  "#f2c94c": "#b8860b",
+  "#73bf69": "#3f9e3a",
+  "#4cc38a": "#1f9d6a",
+  "#81c784": "#3f9e3a",
+  "#8ab4f8": "#2f6fd6",
+  "#ffb74d": "#e08a12",
+};
+export const themed = c =>
+  (document.documentElement.dataset.theme === "light" && LIGHT_MAP[String(c).toLowerCase()]) || c;
 
 /** Làm tròn trần trục Y cho đẹp */
 function niceCeil(v) {
@@ -113,6 +126,8 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
 
   // Vẽ lưới ngang và nhãn trục Y
   ctx.font = isMobile ? "10px system-ui, -apple-system, sans-serif" : "11px system-ui, -apple-system, sans-serif";
+  const TEXT_COLOR = cssVar("--chart-text", "#8b949e");
+  const GRID_COLOR = cssVar("--chart-grid", "rgba(255, 255, 255, 0.08)");
   ctx.fillStyle = TEXT_COLOR;
   ctx.strokeStyle = GRID_COLOR;
   ctx.lineWidth = 1;
@@ -161,7 +176,7 @@ export function renderLineChart(canvas, seriesList = [], options = {}) {
     const pts = (s.points || []).filter(p => p[0] >= startTs - 60 && p[0] <= endTs + 60);
     if (!pts.length) continue;
 
-    const color = s.color || PALETTE[0];
+    const color = themed(s.color || PALETTE[0]);
 
     // Vẽ fill nếu có
     if (fill) {

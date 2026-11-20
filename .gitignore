@@ -1,0 +1,23 @@
+# ── Database SQLite (dữ liệu lưu lượng, không đưa lên git) ──
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
+*.sqlite
+*.sqlite3
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── IDE / OS ──
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── File cấu hình chứa mật khẩu/SNMP community (bỏ comment nếu có) ──
+# .env
+# netmon/config.local.py

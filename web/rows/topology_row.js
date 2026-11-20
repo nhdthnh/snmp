@@ -12,9 +12,10 @@
  */
 import { fmtBps, escapeHtml } from "../format.js";
 
-const VIEW_BOX_ALL = "0 0 2540 2050";
-const VIEW_BOX_HQ = "0 0 2540 1060";
-const VIEW_BOX_BOB = "0 1050 2540 1000";
+// ViewBox cắt sát vào vùng có nội dung (bỏ lề trống) để khi Fit sơ đồ được phóng to tối đa
+const VIEW_BOX_ALL = "270 0 2250 1990";
+const VIEW_BOX_HQ = "400 0 2030 1010";
+const VIEW_BOX_BOB = "270 1090 2250 900";
 
 // --- DANH MỤC 32 CAMERA IP HIKVISION CHI NHÁNH NHÀ MÁY BOB (CHIA THEO 3 SWITCH) ---
 const BOB_CAMERAS = {
@@ -368,8 +369,10 @@ const ORTHO_LINKS = [
   },
 ];
 
-let activeSiteFilter = "all"; // "all" | "hq" | "bob"
+let activeSiteFilter = "hq";  // "all" | "hq" | "bob"  (mặc định HQ: tỉ lệ ngang, Fit ra chữ to dễ đọc)
 let currentZoom = 1.0;
+let fitMode = true;            // tự Fit khi mở / đổi khu vực / resize / toàn màn hình; zoom tay hay 100% thì tắt
+let fitListenersBound = false;
 
 export const TopologyRow = {
   render(status) {
@@ -750,6 +753,8 @@ export const TopologyRow = {
     setupSiteFilterButtons();
     const wrap = document.querySelector(".topo-wrap");
     if (wrap) setupDragPan(wrap);
+    bindFitListeners();
+    if (fitMode && wrap) requestAnimationFrame(() => fitToView(svg, wrap));
   },
 
   load(range, status) {
@@ -1236,22 +1241,20 @@ function setupSiteFilterButtons() {
     const svgElem = document.getElementById("topology-svg");
     if (!svgElem) return;
 
+    const wrapEl = document.querySelector(".topo-wrap");
+
     if (ev.target.id === "btn-zoom-in") {
-      currentZoom = Math.min(2.5, currentZoom + 0.15);
-      applyZoom(svgElem);
+      fitMode = false;
+      setSvgWidth(svgElem, svgElem.getBoundingClientRect().width * 1.15);
     } else if (ev.target.id === "btn-zoom-out") {
-      currentZoom = Math.max(0.5, currentZoom - 0.15);
-      applyZoom(svgElem);
+      fitMode = false;
+      setSvgWidth(svgElem, svgElem.getBoundingClientRect().width / 1.15);
     } else if (ev.target.id === "btn-zoom-fit") {
-      currentZoom = 1.0;
-      svgElem.style.width = "100%";
-      svgElem.style.minWidth = "0px";
-      svgElem.style.transform = "none";
+      fitMode = true;
+      if (wrapEl) fitToView(svgElem, wrapEl);
     } else if (ev.target.id === "btn-zoom-100") {
-      currentZoom = 1.0;
-      svgElem.style.width = "2540px";
-      svgElem.style.minWidth = "2540px";
-      svgElem.style.transform = "none";
+      fitMode = false;
+      setSvgWidth(svgElem, svgElem.viewBox.baseVal.width || 2540); // 100% = 1 đơn vị viewBox = 1px
     } else if (ev.target.id === "btn-fullscreen") {
       const wrap = document.querySelector(".topo-wrap");
       if (!wrap) return;
@@ -1264,6 +1267,73 @@ function setupSiteFilterButtons() {
       }
     }
   };
+}
+
+/** Đặt chiều rộng SVG (chiều cao tự theo tỉ lệ viewBox). Bỏ min-width cứng 2540px của CSS để có thể thu nhỏ. */
+function setSvgWidth(svg, px) {
+  const w = Math.max(500, Math.min(8000, Math.floor(px)));
+  svg.style.minWidth = "0";
+  svg.style.width = w + "px";
+  svg.style.transform = "none";
+}
+
+/** Fit: chọn tỉ lệ nhỏ hơn giữa (rộng khung / rộng sơ đồ) và (cao khung / cao sơ đồ) → thấy trọn toàn bộ topology. */
+function fitToView(svg, wrap) {
+  const vb = svg.viewBox && svg.viewBox.baseVal;
+  if (!vb || !vb.width || !vb.height) return;
+
+  const cs = getComputedStyle(wrap);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+  const fixedHeight = document.fullscreenElement === wrap || document.body.classList.contains("tab-topology-active");
+  const boxH = fixedHeight
+    ? wrap.clientHeight
+    : (parseFloat(cs.maxHeight) || window.innerHeight - 140);
+
+  const availW = wrap.clientWidth - padX - 4;
+  const availH = boxH - padY - 4;
+  if (availW <= 0 || availH <= 0) return;
+
+  const scale = Math.min(availW / vb.width, availH / vb.height);
+  setSvgWidth(svg, vb.width * scale);
+  wrap.scrollLeft = 0;
+  wrap.scrollTop = 0;
+}
+
+function bindFitListeners() {
+  if (fitListenersBound) return;
+  fitListenersBound = true;
+  const refit = () => {
+    if (!fitMode) return;
+    const svg = document.getElementById("topology-svg");
+    const wrap = document.querySelector(".topo-wrap");
+    if (svg && wrap) fitToView(svg, wrap);
+  };
+  window.addEventListener("resize", () => requestAnimationFrame(refit));
+  document.addEventListener("fullscreenchange", () => setTimeout(refit, 120));
+
+  // Ctrl + lăn chuột (hoặc pinch trên touchpad): zoom quanh vị trí con trỏ
+  const wrap = document.querySelector(".topo-wrap");
+  if (wrap) {
+    wrap.addEventListener("wheel", e => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const svg = document.getElementById("topology-svg");
+      if (!svg) return;
+      const oldW = svg.getBoundingClientRect().width;
+      const wr = wrap.getBoundingClientRect();
+      const mx = e.clientX - wr.left;
+      const my = e.clientY - wr.top;
+      const px = mx + wrap.scrollLeft;
+      const py = my + wrap.scrollTop;
+      fitMode = false;
+      setSvgWidth(svg, oldW * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+      const ratio = svg.getBoundingClientRect().width / oldW;
+      wrap.scrollLeft = px * ratio - mx;
+      wrap.scrollTop = py * ratio - my;
+    }, { passive: false });
+  }
 }
 
 function applyZoom(svg) {

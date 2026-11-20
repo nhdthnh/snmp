@@ -16,6 +16,8 @@ import { NeighborsRow } from "./rows/neighbors_row.js";
 import { SnmpRow } from "./rows/snmp_row.js";
 import { TopologyRow } from "./rows/topology_row.js";
 import { WanCardsRow } from "./rows/wan_cards_row.js";
+import { DualRow } from "./rows/dual_row.js";
+import { prefs, applyTheme, currentTheme, toggleTheme } from "./theme.js";
 
 class NetMonApp {
   constructor() {
@@ -24,12 +26,36 @@ class NetMonApp {
     this.timer = null;
     this.status = null;
     this.activeTab = "all";
-    this.activeRouter = "all";    // Mặc định: "all" (Cả 2 Router HQ & BOB)
+    this.activeRouter = prefs.get("router", "all"); // "all" (Cả 2 Router) | "hq" | "bob"
+    if (!["all", "hq", "bob"].includes(this.activeRouter)) this.activeRouter = "all";
     this.isRefreshing = false;
   }
 
+  /** Router dùng cho các mục bên dưới: các row tự xử lý mode "all" (gộp HQ + BOB). */
+  get effRouter() {
+    return this.activeRouter;
+  }
+
+  applyRouterView() {
+    document.body.classList.toggle("view-both", this.activeRouter === "all");
+    const sel = document.getElementById("router-select");
+    if (sel) sel.value = this.activeRouter;
+  }
+
+  setRouter(value) {
+    this.activeRouter = value;
+    prefs.set("router", value);
+    this.applyRouterView();
+    if (this.status) {
+      this.renderStatus(this.status);
+      this.loadHistory();
+    }
+  }
+
   async init() {
+    applyTheme(currentTheme());
     this.bindEvents();
+    this.applyRouterView();
     InterfacesTableRow.initControls();
     await this.refresh(true);
     this.resetTimer();
@@ -39,8 +65,14 @@ class NetMonApp {
     // Dropdown chọn router MikroTik xem SNMP (HQ vs BOB)
     const routerSelect = document.getElementById("router-select");
     if (routerSelect) {
-      routerSelect.onchange = ev => {
-        this.activeRouter = ev.target.value;
+      routerSelect.onchange = ev => this.setRouter(ev.target.value);
+    }
+
+    // Nút đổi giao diện sáng / tối
+    const themeBtn = document.getElementById("theme-toggle-btn");
+    if (themeBtn) {
+      themeBtn.onclick = () => {
+        toggleTheme();
         if (this.status) {
           this.renderStatus(this.status);
           this.loadHistory();
@@ -267,6 +299,9 @@ class NetMonApp {
     try { TotalRow.render(status, this.activeRouter); } catch (e) { console.error("TotalRow.render error:", e); }
     try { StatsRow.render(status, this.activeRouter); } catch (e) { console.error("StatsRow.render error:", e); }
     try { WanCardsRow.render(status, this.activeRouter); } catch (e) { console.error("WanCardsRow.render error:", e); }
+    if (this.activeRouter === "all") {
+      try { DualRow.render(status); } catch (e) { console.error("DualRow.render error:", e); }
+    }
     try { InterfacesTableRow.render(status, this.activeRouter); } catch (e) { console.error("InterfacesTableRow.render error:", e); }
     try { NeighborsRow.render(rtrStatus); } catch (e) { console.error("NeighborsRow.render error:", e); }
     try { SnmpRow.render(rtrStatus); } catch (e) { console.error("SnmpRow.render error:", e); }
@@ -277,7 +312,12 @@ class NetMonApp {
     if (!this.status) return;
     const r = this.range;
     const s = this.status;
-    const activeRouter = this.activeRouter;
+    const activeRouter = this.effRouter;
+
+    // Chế độ "Cả 2 Router": vẽ 2 khối HQ / BOB riêng biệt
+    if (this.activeRouter === "all") {
+      DualRow.load(r).catch(e => console.error("DualRow.load error:", e));
+    }
 
     // Tải song song lịch sử cho các hàng đồ thị theo router đang chọn (HQ vs BOB)
     await Promise.allSettled([
